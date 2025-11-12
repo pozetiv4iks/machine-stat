@@ -25,7 +25,7 @@ interface CalendarMonthProps {
   month: number;
   monthName: string;
   today: Date;
-  monthRef?: React.RefObject<HTMLDivElement>;
+  monthRef?: React.RefObject<HTMLDivElement | null>;
   onDateClick: (date: Date) => void;
 }
 
