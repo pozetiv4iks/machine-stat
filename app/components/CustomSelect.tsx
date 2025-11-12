@@ -19,6 +19,8 @@ export default function CustomSelect({
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const selectedOptionRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -29,6 +31,12 @@ export default function CustomSelect({
 
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
+      // Прокручиваем к выбранному элементу при открытии
+      setTimeout(() => {
+        if (selectedOptionRef.current && dropdownRef.current) {
+          selectedOptionRef.current.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
+      }, 0);
     }
 
     return () => {
@@ -36,7 +44,7 @@ export default function CustomSelect({
     };
   }, [isOpen]);
 
-  const selectedOption = options.find((opt) => opt === value) || placeholder;
+  const selectedOption = value && options.find((opt) => opt === value) ? value : placeholder;
 
   return (
     <div className="relative" ref={selectRef}>
@@ -73,17 +81,21 @@ export default function CustomSelect({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+        <div 
+          ref={dropdownRef}
+          className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+        >
           {options.map((option) => (
             <button
               key={option}
+              ref={value === option ? selectedOptionRef : null}
               type="button"
               onClick={() => {
                 onChange(option);
                 setIsOpen(false);
               }}
               className={`w-full px-4 py-2 text-left hover:bg-[#E1F5C6] transition-colors ${
-                value === option ? "bg-[#E1F5C6]" : ""
+                value === option ? "bg-[#E1F5C6] text-white" : "text-black"
               }`}
             >
               {option}

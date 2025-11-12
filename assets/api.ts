@@ -98,6 +98,22 @@ export async function getUserById(id: number): Promise<User> {
 }
 
 export async function createUser(userData: Partial<User>): Promise<User> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    // Генерируем новый ID
+    const newId = Math.max(...mockUsers.map(u => u.id), 0) + 1;
+    const newUser: User = {
+      id: newId,
+      username: userData.username || "",
+      full_name: userData.full_name || "",
+      role: userData.role || "",
+      telegram_id: userData.telegram_id || "",
+      created_at: new Date().toISOString(),
+    };
+    mockUsers.push(newUser);
+    return { ...newUser };
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/users`, {
       method: 'POST',
@@ -151,6 +167,17 @@ export async function updateUser(id: number, userData: Partial<User>): Promise<U
 }
 
 export async function deleteUser(id: number): Promise<void> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const userIndex = mockUsers.findIndex(u => u.id === id);
+    if (userIndex === -1) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    // Удаляем пользователя из моковых данных
+    mockUsers.splice(userIndex, 1);
+    return;
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/users/${id}`, {
       method: 'DELETE',

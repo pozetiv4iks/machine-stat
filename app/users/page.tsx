@@ -1,16 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getUsers, type User } from "@/assets/api";
+import { getUsers, deleteUser, type User } from "@/assets/api";
 import UserEditModal from "../components/UserEditModal";
+import DeleteConfirmModal from "../components/DeleteConfirmModal";
+import CustomSelect from "../components/CustomSelect";
+
+const roles = [
+  "менеджмент",
+  "админ",
+  "супер админ",
+  "начальник отдела 1",
+  "начальник отдела 2",
+  "проверяющий",
+];
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRole, setSelectedRole] = useState<string>("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -31,11 +46,17 @@ export default function UsersPage() {
   };
 
   const filteredUsers = users.filter((user) => {
+    // Фильтр по поисковому запросу
     const query = searchQuery.toLowerCase();
     const name = user.full_name || user.username || "";
     const username = user.username || "";
     const telegramId = user.telegram_id || "";
-    return name.toLowerCase().includes(query) || username.toLowerCase().includes(query) || telegramId.toLowerCase().includes(query);
+    const matchesSearch = name.toLowerCase().includes(query) || username.toLowerCase().includes(query) || telegramId.toLowerCase().includes(query);
+    
+    // Фильтр по роли
+    const matchesRole = !selectedRole || user.role === selectedRole;
+    
+    return matchesSearch && matchesRole;
   });
 
   const getUserDisplayName = (user: User) => {
@@ -58,6 +79,40 @@ export default function UsersPage() {
 
   const handleSaveUser = () => {
     loadUsers(); // Перезагружаем список пользователей после сохранения
+  };
+
+  const handleAddUser = () => {
+    setSelectedUser(null);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteUser = (user: User) => {
+    setUserToDelete(user);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return;
+
+    try {
+      setDeleting(true);
+      await deleteUser(userToDelete.id);
+      setIsDeleteModalOpen(false);
+      setUserToDelete(null);
+      loadUsers(); // Перезагружаем список пользователей после удаления
+    } catch (err) {
+      console.error("Не удалось удалить пользователя", err);
+      alert("Не удалось удалить пользователя");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleCloseDeleteModal = () => {
+    if (!deleting) {
+      setIsDeleteModalOpen(false);
+      setUserToDelete(null);
+    }
   };
 
   return (
@@ -93,8 +148,8 @@ export default function UsersPage() {
       <div className="px-12 pt-16 pb-16 relative z-10 max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold text-black mb-16">Пользователи</h1>
 
-        {/* Поисковая строка */}
-        <div className="mb-16">
+        {/* Поисковая строка и фильтр */}
+        <div className="mb-16 space-y-4">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg
@@ -118,6 +173,24 @@ export default function UsersPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="block w-full pl-10 pr-3 py-3 border border-black rounded-lg bg-white text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-[#E1F5C6] focus:border-transparent"
             />
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex-1 max-w-xs">
+              <CustomSelect
+                value={selectedRole}
+                onChange={setSelectedRole}
+                options={roles}
+                placeholder="Все статусы"
+              />
+            </div>
+            {selectedRole && (
+              <button
+                onClick={() => setSelectedRole("")}
+                className="text-sm text-gray-600 hover:text-black underline whitespace-nowrap"
+              >
+                Сбросить фильтр
+              </button>
+            )}
           </div>
         </div>
 
@@ -146,7 +219,7 @@ export default function UsersPage() {
             {filteredUsers.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-600">
-                  {searchQuery ? "Пользователи не найдены" : "Нет пользователей"}
+                  {searchQuery || selectedRole ? "Пользователи не найдены" : "Нет пользователей"}
                 </p>
               </div>
             ) : (
@@ -161,7 +234,9 @@ export default function UsersPage() {
                         {getUserDisplayName(user)}
                       </h3>
                       {user.username && (
-                        <p className="text-sm text-gray-600 mt-1">@{user.username}</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {user.username.startsWith("@") ? user.username : `@${user.username}`}
+                        </p>
                       )}
                       {user.telegram_id && (
                         <p className="text-sm text-gray-500 mt-1">Telegram: {user.telegram_id}</p>
@@ -172,25 +247,46 @@ export default function UsersPage() {
                         </span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleEditUser(user)}
-                      className="ml-4 p-2 text-gray-600 hover:text-black transition-colors"
-                      aria-label="Редактировать"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEditUser(user)}
+                        className="p-2 text-gray-600 hover:text-black transition-colors"
+                        aria-label="Редактировать"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                    </button>
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(user)}
+                        className="p-2 text-gray-600 hover:text-red-600 transition-colors"
+                        aria-label="Удалить"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -199,12 +295,43 @@ export default function UsersPage() {
         )}
       </div>
 
+      {/* Кнопка добавления пользователя */}
+      <button
+        onClick={handleAddUser}
+        className="fixed bottom-24 right-6 w-14 h-14 bg-[#E1F5C6] rounded-full shadow-lg flex items-center justify-center hover:bg-[#d4e8b0] transition-colors z-40"
+        aria-label="Добавить пользователя"
+      >
+        <svg
+          className="w-6 h-6 text-black"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 4v16m8-8H4"
+          />
+        </svg>
+      </button>
+
       {/* Модальное окно редактирования */}
       <UserEditModal
         user={selectedUser}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSave={handleSaveUser}
+      />
+
+      {/* Модальное окно подтверждения удаления */}
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDelete}
+        title="Удалить пользователя?"
+        message={`Вы точно хотите удалить пользователя "${userToDelete ? getUserDisplayName(userToDelete) : ''}"? Это действие нельзя отменить.`}
+        loading={deleting}
       />
     </div>
   );
