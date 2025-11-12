@@ -1,4 +1,4 @@
-import { User, Checklist, ChartData } from './api';
+import { User, Checklist, ChartData, Chat, Message } from './api';
 
 export const mockUsers: User[] = [
   {
@@ -139,5 +139,96 @@ export const mockChartDataYear: ChartData[] = [
   { date: "2024-10", value: 5, label: "Окт" },
   { date: "2024-11", value: 6, label: "Ноя" },
   { date: "2024-12", value: 4, label: "Дек" },
+];
+
+export const mockMessages: Message[] = [
+  {
+    id: 1,
+    chat_id: 1,
+    sender_id: 1,
+    text: "Привет! Как дела?",
+    created_at: "2024-01-22T10:00:00Z",
+  },
+  {
+    id: 2,
+    chat_id: 1,
+    sender_id: 2,
+    text: "Привет! Всё отлично, спасибо!",
+    created_at: "2024-01-22T10:05:00Z",
+  },
+  {
+    id: 3,
+    chat_id: 1,
+    sender_id: 1,
+    text: "Отлично! Можешь помочь с проверкой оборудования?",
+    created_at: "2024-01-22T10:10:00Z",
+  },
+  {
+    id: 4,
+    chat_id: 2,
+    sender_id: 3,
+    text: "Добрый день! Нужна помощь с чеклистом",
+    created_at: "2024-01-22T11:00:00Z",
+  },
+  {
+    id: 5,
+    chat_id: 2,
+    sender_id: 1,
+    text: "Конечно, чем могу помочь?",
+    created_at: "2024-01-22T11:05:00Z",
+  },
+  {
+    id: 6,
+    chat_id: 3,
+    sender_id: 4,
+    text: "Здравствуйте! Когда будет готов отчёт?",
+    created_at: "2024-01-22T12:00:00Z",
+  },
+  {
+    id: 7,
+    chat_id: 3,
+    sender_id: 1,
+    text: "Отчёт будет готов к концу недели",
+    created_at: "2024-01-22T12:15:00Z",
+  },
+];
+
+export const mockChats: Chat[] = [
+  {
+    id: 1,
+    user1_id: 1,
+    user2_id: 2,
+    last_message: mockMessages[2],
+    unread_count: 0,
+    created_at: "2024-01-20T09:00:00Z",
+    updated_at: "2024-01-22T10:10:00Z",
+  },
+  {
+    id: 2,
+    user1_id: 1,
+    user2_id: 3,
+    last_message: mockMessages[4],
+    unread_count: 1,
+    created_at: "2024-01-21T10:00:00Z",
+    updated_at: "2024-01-22T11:05:00Z",
+  },
+  {
+    id: 3,
+    user1_id: 1,
+    user2_id: 4,
+    last_message: mockMessages[6],
+    unread_count: 0,
+    created_at: "2024-01-19T08:00:00Z",
+    updated_at: "2024-01-22T12:15:00Z",
+  },
+  {
+    id: 4,
+    user1_id: 1,
+    user2_id: 5,
+    last_message: undefined,
+    unread_count: 0,
+    created_at: "2024-01-18T14:00:00Z",
+    updated_at: "2024-01-18T14:00:00Z",
+  },
 ];
 

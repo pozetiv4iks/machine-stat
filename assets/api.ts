@@ -6,7 +6,9 @@ import {
   mockChecklists, 
   mockChartDataWeek, 
   mockChartDataMonth, 
-  mockChartDataYear 
+  mockChartDataYear,
+  mockChats,
+  mockMessages
 } from './mockData';
 
 export interface User {
@@ -38,6 +40,24 @@ export interface ChartData {
   date: string;
   value: number;
   label?: string;
+}
+
+export interface Message {
+  id: number;
+  chat_id: number;
+  sender_id: number;
+  text: string;
+  created_at: string;
+}
+
+export interface Chat {
+  id: number;
+  user1_id: number;
+  user2_id: number;
+  last_message?: Message;
+  unread_count?: number;
+  created_at: string;
+  updated_at: string;
 }
 
 // Users API
@@ -330,6 +350,102 @@ export async function getChartData(period?: string): Promise<ChartData[]> {
     return Array.isArray(data) ? data : [];
   } catch (error) {
     console.error('Error fetching chart data:', error);
+    throw error;
+  }
+}
+
+// Chats API
+export async function getChats(userId?: number): Promise<Chat[]> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 400));
+    let chats = [...mockChats];
+    if (userId) {
+      chats = chats.filter(chat => chat.user1_id === userId || chat.user2_id === userId);
+    }
+    return chats;
+  }
+
+  try {
+    const url = userId 
+      ? `${API_BASE_URL}/chats?user_id=${userId}`
+      : `${API_BASE_URL}/chats`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch chats: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Error fetching chats:', error);
+    throw error;
+  }
+}
+
+export async function getChatMessages(chatId: number): Promise<Message[]> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return mockMessages.filter(msg => msg.chat_id === chatId);
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/chats/${chatId}/messages`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch messages: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    throw error;
+  }
+}
+
+export async function sendMessage(chatId: number, senderId: number, text: string): Promise<Message> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const newId = Math.max(...mockMessages.map(m => m.id), 0) + 1;
+    const newMessage: Message = {
+      id: newId,
+      chat_id: chatId,
+      sender_id: senderId,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    mockMessages.push(newMessage);
+    return { ...newMessage };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/chats/${chatId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ sender_id: senderId, text }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to send message: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending message:', error);
     throw error;
   }
 }
