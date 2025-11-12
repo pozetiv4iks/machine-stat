@@ -74,7 +74,7 @@ export default function ChartPage() {
         />
       </div>
 
-      <div className="px-12 pt-16 pb-16 relative z-10 max-w-4xl mx-auto">
+      <div className="px-4 pt-16 pb-16 relative z-10 max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold text-black mb-16">График</h1>
 
         {/* Фильтры */}
@@ -151,7 +151,7 @@ export default function ChartPage() {
                 
                 {/* График с горизонтальной прокруткой для годового периода */}
                 <div className={`ml-8 overflow-x-auto ${period === 'year' ? 'scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100' : ''}`}>
-                  <div className={`flex items-end ${period === 'year' ? 'gap-4 min-w-max' : 'justify-between gap-3'} h-48 border-b border-gray-200`}>
+                  <div className={`flex items-end ${period === 'year' ? 'gap-6 min-w-max' : 'justify-between gap-6'} h-48 border-b border-gray-200`}>
                     {chartData.map((data, index) => {
                       const value = data.value || 0;
                       const heightPercent = (value / maxValue) * 100;

@@ -145,7 +145,7 @@ export default function UsersPage() {
         />
       </div>
 
-      <div className="px-12 pt-16 pb-16 relative z-10 max-w-4xl mx-auto">
+      <div className="px-4 pt-16 pb-16 relative z-10 max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold text-black mb-16">Пользователи</h1>
 
         {/* Поисковая строка и фильтр */}

@@ -27,9 +27,10 @@ interface CalendarMonthProps {
   today: Date;
   monthRef?: React.RefObject<HTMLDivElement | null>;
   onDateClick: (date: Date) => void;
+  getDepartmentsForDate: (date: Date) => any[];
 }
 
-function CalendarMonth({ year, month, monthName, today, monthRef, onDateClick }: CalendarMonthProps) {
+function CalendarMonth({ year, month, monthName, today, monthRef, onDateClick, getDepartmentsForDate }: CalendarMonthProps) {
   // Получаем первый день месяца и количество дней
   const firstDayOfMonth = new Date(year, month, 1);
   const lastDayOfMonth = new Date(year, month + 1, 0);
@@ -69,6 +70,57 @@ function CalendarMonth({ year, month, monthName, today, monthRef, onDateClick }:
     );
   };
 
+  // Получаем начало текущей недели (понедельник)
+  const getStartOfWeek = (date: Date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Понедельник
+    return new Date(d.setDate(diff));
+  };
+
+  // Получаем конец текущей недели (воскресенье)
+  const getEndOfWeek = (date: Date) => {
+    const start = getStartOfWeek(date);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6); // Воскресенье
+    return end;
+  };
+
+  // Проверяем, находится ли день в текущей неделе
+  const isInCurrentWeek = (day: number | null) => {
+    if (day === null) return false;
+    const date = new Date(year, month, day);
+    const weekStart = getStartOfWeek(today);
+    const weekEnd = getEndOfWeek(today);
+    
+    // Сбрасываем время для корректного сравнения
+    weekStart.setHours(0, 0, 0, 0);
+    weekEnd.setHours(23, 59, 59, 999);
+    date.setHours(0, 0, 0, 0);
+    
+    return date >= weekStart && date <= weekEnd;
+  };
+
+  // Проверяем заполненность дня
+  const getDayStatus = (day: number | null) => {
+    if (day === null || !isInCurrentWeek(day)) return null;
+    
+    const date = new Date(year, month, day);
+    const departments = getDepartmentsForDate(date);
+    
+    // Проверяем, есть ли хотя бы одна встреча
+    const hasMeeting = departments.some(dept => dept.meeting && dept.meeting.trim() !== "" && dept.meeting !== "Не назначена");
+    if (hasMeeting) return "meeting"; // Есть встреча - фиолетовый
+    
+    // Проверяем, сколько отделов заполнено (поле inspector)
+    const filledCount = departments.filter(dept => dept.inspector && dept.inspector.trim() !== "").length;
+    const totalCount = departments.length;
+    
+    if (filledCount === 0) return "empty"; // Не заполнены
+    if (filledCount === totalCount) return "full"; // Все заполнены
+    return "partial"; // Частично заполнены
+  };
+
 
   return (
     <div ref={monthRef} className="mb-12">
@@ -101,25 +153,55 @@ function CalendarMonth({ year, month, monthName, today, monthRef, onDateClick }:
               }
             };
 
+            const dayStatus = getDayStatus(day);
+            const inCurrentWeek = isInCurrentWeek(day);
+
             return (
               <div
                 key={index}
                 onClick={handleClick}
-                className={`aspect-square flex items-center justify-center text-lg font-medium rounded-lg transition-colors relative ${
+                className={`aspect-square flex items-center justify-center text-lg font-medium transition-colors relative ${
                   day === null
                     ? "text-transparent"
+                    : inCurrentWeek && dayStatus === "meeting"
+                    ? "text-white"
+                    : inCurrentWeek && dayStatus === "full"
+                    ? "text-white"
+                    : inCurrentWeek && dayStatus === "partial"
+                    ? "text-black"
+                    : inCurrentWeek && dayStatus === "empty"
+                    ? "text-black"
                     : isWeekend(day)
                     ? "text-red-600"
                     : "text-black"
                 } ${
-                  day !== null
-                    ? "hover:bg-gray-100 cursor-pointer"
+                  day !== null && !inCurrentWeek
+                    ? "hover:bg-gray-100 cursor-pointer rounded-lg"
+                    : ""
+                } ${
+                  inCurrentWeek && (dayStatus === "full" || dayStatus === "partial" || dayStatus === "empty" || dayStatus === "meeting")
+                    ? "cursor-pointer"
                     : ""
                 }`}
               >
-                {day}
-                {isToday(day) && (
+                <span className="relative z-10">{day}</span>
+                {inCurrentWeek && dayStatus === "meeting" && (
+                  <div className="absolute inset-0 bg-purple-500 rounded-full pointer-events-none" />
+                )}
+                {inCurrentWeek && dayStatus === "full" && (
+                  <div className="absolute inset-0 bg-green-500 rounded-full pointer-events-none" />
+                )}
+                {inCurrentWeek && dayStatus === "partial" && (
+                  <div className="absolute inset-0 bg-yellow-400 rounded-full pointer-events-none" />
+                )}
+                {inCurrentWeek && dayStatus === "empty" && (
+                  <div className="absolute inset-0 border-2 border-gray-400 rounded-full pointer-events-none" />
+                )}
+                {isToday(day) && !inCurrentWeek && (
                   <div className="absolute inset-0 border-2 border-red-600 rounded-full pointer-events-none" />
+                )}
+                {isToday(day) && (
+                  <div className="absolute left-1/2 transform -translate-x-1/2 w-8 h-1 bg-green-500 rounded-full pointer-events-none z-10" style={{ bottom: '-7px' }} />
                 )}
               </div>
             );
@@ -137,6 +219,7 @@ export default function CalendarPage() {
   const currentMonthRef = useRef<HTMLDivElement>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Прокручиваем к текущему месяцу при монтировании
   useEffect(() => {
@@ -168,22 +251,22 @@ export default function CalendarPage() {
       return departmentsData[dateKey];
     }
 
-    // Иначе возвращаем дефолтные данные
+    // Иначе возвращаем дефолтные данные (пустые)
     return [
       {
         check: "Ежедневная проверка",
-        inspector: "Иван Иванов",
-        meeting: "Не назначена",
+        inspector: "",
+        meeting: "",
       },
       {
         check: "Ежедневная проверка",
-        inspector: "Мария Петрова",
-        meeting: "Сергей Волков",
+        inspector: "",
+        meeting: "",
       },
       {
         check: "Ежедневная проверка",
-        inspector: "Петр Сидоров",
-        meeting: "Не назначена",
+        inspector: "",
+        meeting: "",
       },
     ];
   };
@@ -195,6 +278,8 @@ export default function CalendarPage() {
         ...prev,
         [dateKey]: departments,
       }));
+      // Обновляем календарь для перерисовки статусов дней
+      setRefreshKey((prev) => prev + 1);
       // Здесь можно добавить вызов API для сохранения данных
       // await saveDateDepartments(selectedDate, departments);
     }
@@ -230,14 +315,14 @@ export default function CalendarPage() {
         />
       </div>
 
-      <div className="px-12 pt-16 pb-16 relative z-10 max-w-4xl mx-auto">
+      <div className="px-4 pt-16 pb-16 relative z-10 max-w-4xl mx-auto">
         {/* Заголовок года */}
         <h1 className="text-3xl font-bold text-black mb-12 text-center">
           {currentYear}
         </h1>
 
         {/* Все месяцы года */}
-        <div className="space-y-8">
+        <div className="space-y-8" key={refreshKey}>
           {monthNames.map((monthName, index) => (
             <CalendarMonth
               key={index}
@@ -247,6 +332,7 @@ export default function CalendarPage() {
               today={today}
               monthRef={index === currentMonth ? currentMonthRef : undefined}
               onDateClick={handleDateClick}
+              getDepartmentsForDate={getDepartmentsForDate}
             />
           ))}
         </div>

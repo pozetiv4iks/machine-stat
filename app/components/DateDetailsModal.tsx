@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import UserSelectModal from "./UserSelectModal";
 
 interface DepartmentInfo {
   check: string;
@@ -25,6 +26,15 @@ export default function DateDetailsModal({
 }: DateDetailsModalProps) {
   const [editedDepartments, setEditedDepartments] = useState<DepartmentInfo[]>(departments);
   const [loading, setLoading] = useState(false);
+  const [userSelectModal, setUserSelectModal] = useState<{
+    isOpen: boolean;
+    field: "inspector" | "meeting" | null;
+    departmentIndex: number | null;
+  }>({
+    isOpen: false,
+    field: null,
+    departmentIndex: null,
+  });
 
   useEffect(() => {
     setEditedDepartments(departments);
@@ -56,6 +66,29 @@ export default function DateDetailsModal({
     const updated = [...editedDepartments];
     updated[index] = { ...updated[index], [field]: value };
     setEditedDepartments(updated);
+  };
+
+  const handleOpenUserSelect = (index: number, field: "inspector" | "meeting") => {
+    setUserSelectModal({
+      isOpen: true,
+      field,
+      departmentIndex: index,
+    });
+  };
+
+  const handleSelectUser = (userName: string) => {
+    if (userSelectModal.field !== null && userSelectModal.departmentIndex !== null) {
+      handleDepartmentChange(userSelectModal.departmentIndex, userSelectModal.field, userName);
+    }
+    setUserSelectModal({
+      isOpen: false,
+      field: null,
+      departmentIndex: null,
+    });
+  };
+
+  const handleClearField = (index: number, field: "inspector" | "meeting") => {
+    handleDepartmentChange(index, field, "");
   };
 
   const handleSave = async () => {
@@ -123,25 +156,81 @@ export default function DateDetailsModal({
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Имя кто проводит
                     </label>
-                    <input
-                      type="text"
-                      value={dept.inspector || ""}
-                      onChange={(e) => handleDepartmentChange(index, "inspector", e.target.value)}
-                      placeholder="Не указано"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E1F5C6] focus:border-transparent text-black"
-                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenUserSelect(index, "inspector")}
+                        className={`flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E1F5C6] focus:border-transparent text-left ${
+                          dept.inspector
+                            ? "bg-white text-black"
+                            : "bg-gray-50 text-gray-500"
+                        }`}
+                      >
+                        {dept.inspector || "Не указано"}
+                      </button>
+                      {dept.inspector && (
+                        <button
+                          type="button"
+                          onClick={() => handleClearField(index, "inspector")}
+                          className="px-3 py-2 text-gray-500 hover:text-red-600 transition-colors"
+                          aria-label="Очистить"
+                        >
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Встреча
                     </label>
-                    <input
-                      type="text"
-                      value={dept.meeting || ""}
-                      onChange={(e) => handleDepartmentChange(index, "meeting", e.target.value)}
-                      placeholder="Не назначена"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E1F5C6] focus:border-transparent text-black"
-                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenUserSelect(index, "meeting")}
+                        className={`flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E1F5C6] focus:border-transparent text-left ${
+                          dept.meeting && dept.meeting !== "Не назначена"
+                            ? "bg-white text-black"
+                            : "bg-gray-50 text-gray-500"
+                        }`}
+                      >
+                        {dept.meeting || "Не назначена"}
+                      </button>
+                      {dept.meeting && dept.meeting !== "Не назначена" && (
+                        <button
+                          type="button"
+                          onClick={() => handleClearField(index, "meeting")}
+                          className="px-3 py-2 text-gray-500 hover:text-red-600 transition-colors"
+                          aria-label="Очистить"
+                        >
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -165,6 +254,24 @@ export default function DateDetailsModal({
           </div>
         </div>
       </div>
+
+      {/* Модалка выбора пользователя */}
+      <UserSelectModal
+        isOpen={userSelectModal.isOpen}
+        onClose={() =>
+          setUserSelectModal({
+            isOpen: false,
+            field: null,
+            departmentIndex: null,
+          })
+        }
+        onSelect={handleSelectUser}
+        title={
+          userSelectModal.field === "inspector"
+            ? "Выберите проверяющего"
+            : "Выберите участника встречи"
+        }
+      />
     </div>
   );
 }
