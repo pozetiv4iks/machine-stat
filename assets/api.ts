@@ -206,22 +206,35 @@ export async function getUsers(): Promise<User[]> {
   }
 
   if (USE_API_FIRST) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/users`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+      const url = `${API_BASE_URL}/users`;
+      console.log('[API] Fetching users from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch users: ${response.statusText}`);
-    }
+      console.log('[API] Response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[API] Error response:', errorText);
+        throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
+      }
 
       const data: UserResponse[] = await response.json();
-      return Array.isArray(data) ? data.map(adaptUserFromAPI) : [];
-  } catch (error) {
-      console.warn('API request failed, using mock data:', error);
+      console.log('[API] Received users:', data.length, 'items');
+      console.log('[API] Users data:', data);
+      
+      const adaptedUsers = Array.isArray(data) ? data.map(adaptUserFromAPI) : [];
+      console.log('[API] Adapted users:', adaptedUsers);
+      
+      return adaptedUsers;
+    } catch (error) {
+      console.warn('[API] Request failed, using mock data:', error);
       // При ошибке используем моковые данные
       await new Promise(resolve => setTimeout(resolve, 300));
       return getMockUsers();
@@ -276,6 +289,8 @@ export async function checkUserAccess(userName: string): Promise<UserAccessRespo
   if (USE_API_FIRST) {
     try {
       const url = `${API_BASE_URL}/users/check-access?user_name=${encodeURIComponent(userName)}`;
+      console.log('[API] Checking user access:', url);
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -283,19 +298,25 @@ export async function checkUserAccess(userName: string): Promise<UserAccessRespo
         },
       });
 
+      console.log('[API] check-access response status:', response.status, response.statusText);
+
       if (!response.ok) {
         // Если 404 или другой ошибка, возвращаем has_access: false
         if (response.status === 404) {
+          console.log('[API] User not found (404)');
           return {
             has_access: false,
             message: "User not found",
             user: null,
           };
         }
+        const errorText = await response.text();
+        console.error('[API] check-access error:', errorText);
         throw new Error(`Failed to check user access: ${response.status} ${response.statusText}`);
       }
 
       const data: UserAccessResponse = await response.json();
+      console.log('[API] check-access response:', data);
       return data;
     } catch (error) {
       console.warn('API request failed, using mock data:', error);
@@ -344,6 +365,8 @@ export async function getUserByUsername(userName: string): Promise<User> {
   if (USE_API_FIRST) {
     try {
       const url = `${API_BASE_URL}/users/${encodeURIComponent(userName)}`;
+      console.log('[API] Getting user by username:', url);
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -351,15 +374,23 @@ export async function getUserByUsername(userName: string): Promise<User> {
         },
       });
 
+      console.log('[API] getUserByUsername response status:', response.status, response.statusText);
+
       if (!response.ok) {
         if (response.status === 404) {
+          console.log('[API] User not found (404)');
           throw new Error(`User with username ${userName} not found`);
         }
+        const errorText = await response.text();
+        console.error('[API] getUserByUsername error:', errorText);
         throw new Error(`Failed to fetch user: ${response.status} ${response.statusText}`);
       }
 
       const data: UserResponse = await response.json();
-      return adaptUserFromAPI(data);
+      console.log('[API] getUserByUsername response:', data);
+      const adapted = adaptUserFromAPI(data);
+      console.log('[API] Adapted user:', adapted);
+      return adapted;
     } catch (error) {
       console.warn('API request failed, using mock data:', error);
       // При ошибке используем моковые данные
@@ -569,6 +600,9 @@ export async function updateUserByUsername(userName: string, userData: Partial<U
     try {
       const apiData = adaptUserToAPI({ ...userData, user_name: userName, username: userName });
       const url = `${API_BASE_URL}/users/${encodeURIComponent(userName)}`;
+      console.log('[API] Updating user by username:', url);
+      console.log('[API] Request data:', apiData);
+      
       const response = await fetch(url, {
         method: 'PUT',
         headers: {
@@ -577,15 +611,23 @@ export async function updateUserByUsername(userName: string, userData: Partial<U
         body: JSON.stringify(apiData),
       });
 
+      console.log('[API] updateUserByUsername response status:', response.status, response.statusText);
+
       if (!response.ok) {
         if (response.status === 404) {
+          console.log('[API] User not found (404)');
           throw new Error(`User with username ${userName} not found`);
         }
+        const errorText = await response.text();
+        console.error('[API] updateUserByUsername error:', errorText);
         throw new Error(`Failed to update user: ${response.status} ${response.statusText}`);
       }
 
       const data: UserResponse = await response.json();
-      return adaptUserFromAPI(data);
+      console.log('[API] updateUserByUsername response:', data);
+      const adapted = adaptUserFromAPI(data);
+      console.log('[API] Adapted updated user:', adapted);
+      return adapted;
     } catch (error) {
       console.warn('API request failed, using mock data:', error);
       await new Promise(resolve => setTimeout(resolve, 300));
