@@ -46,7 +46,7 @@ export default function RoleEditModal({
       setLoading(true);
       setError(null);
 
-      if (isEditMode && role) {
+      if (isEditMode && role && role.id !== undefined) {
         await updateRole(role.id, {
           name: name.trim(),
           type: type,
