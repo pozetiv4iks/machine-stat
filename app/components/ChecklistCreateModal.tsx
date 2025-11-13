@@ -179,7 +179,7 @@ export default function ChecklistCreateModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-md">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col mx-4">
         {/* Заголовок */}
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -390,7 +390,7 @@ export default function ChecklistCreateModal({
         </form>
 
         {/* Кнопки */}
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+        <div className="px-6 py-4 -mt-5 border-t border-gray-200 flex justify-end gap-3">
           <button
             type="button"
             onClick={handleClose}

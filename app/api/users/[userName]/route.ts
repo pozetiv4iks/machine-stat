@@ -9,7 +9,11 @@ export async function PUT(
 ) {
   try {
     const params = await context.params;
-    const userName = decodeURIComponent(params.userName);
+    let userName = decodeURIComponent(params.userName);
+    // Убираем символ @ из начала userName если он есть
+    if (userName.startsWith('@')) {
+      userName = userName.substring(1);
+    }
     const body = await request.json();
     
     console.log('[API Proxy] Updating user:', userName);
@@ -61,7 +65,11 @@ export async function DELETE(
 ) {
   try {
     const params = await context.params;
-    const userName = decodeURIComponent(params.userName);
+    let userName = decodeURIComponent(params.userName);
+    // Убираем символ @ из начала userName если он есть
+    if (userName.startsWith('@')) {
+      userName = userName.substring(1);
+    }
     
     console.log('[API Proxy] Deleting user:', userName);
     
