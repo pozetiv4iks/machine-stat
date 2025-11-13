@@ -81,6 +81,7 @@ export interface Report {
   department_index: number;
   items: ReportItem[];
   status: string; // "Не начато", "В процессе", "Завершено"
+  score?: number; // Баллы (количество выполненных пунктов)
   created_at: string;
   updated_at: string;
 }

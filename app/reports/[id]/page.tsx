@@ -14,6 +14,7 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showFinalModal, setShowFinalModal] = useState(false);
 
   useEffect(() => {
     if (reportId) {
@@ -44,11 +45,18 @@ export default function ReportPage() {
   const handleItemToggle = (itemId: number) => {
     if (!report) return;
     
-    const updatedItems = report.items.map(item => 
-      item.id === itemId 
-        ? { ...item, completed: !item.completed }
-        : item
-    );
+    const updatedItems = report.items.map(item => {
+      if (item.id === itemId) {
+        const newCompleted = !item.completed;
+        // Если отмечаем как выполненное, удаляем фото
+        return { 
+          ...item, 
+          completed: newCompleted,
+          report_photo: newCompleted ? undefined : item.report_photo
+        };
+      }
+      return item;
+    });
     
     setReport({ ...report, items: updatedItems });
   };
@@ -82,9 +90,22 @@ export default function ReportPage() {
   const handleSave = async () => {
     if (!report) return;
 
+    // Проверяем, что для всех незавершенных пунктов есть фото
+    const incompleteItems = report.items.filter(item => !item.completed);
+    const itemsWithoutPhoto = incompleteItems.filter(item => !item.report_photo);
+    
+    if (itemsWithoutPhoto.length > 0) {
+      setError("Для всех незавершенных пунктов необходимо приложить фото");
+      return;
+    }
+
     try {
       setSaving(true);
       setError(null);
+
+      // Подсчитываем баллы (количество выполненных пунктов)
+      const completedCount = report.items.filter(item => item.completed).length;
+      const score = completedCount;
 
       // Определяем статус на основе завершенных пунктов
       const allCompleted = report.items.every(item => item.completed);
@@ -100,9 +121,11 @@ export default function ReportPage() {
       await updateReport(report.id, {
         ...report,
         status: newStatus,
+        score: score,
       });
 
-      router.push("/reports");
+      // Показываем финальную модалку
+      setShowFinalModal(true);
     } catch (err) {
       console.error("Ошибка сохранения отчета:", err);
       setError("Не удалось сохранить отчет");
@@ -223,20 +246,53 @@ export default function ReportPage() {
               className="bg-white border border-gray-200 rounded-lg p-4"
             >
               <div className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={item.completed}
-                  onChange={() => handleItemToggle(item.id)}
-                  className="w-5 h-5 text-[#DBEDAE] border-gray-300 rounded focus:ring-[#DBEDAE] mt-1 flex-shrink-0"
-                />
+                <button
+                  type="button"
+                  onClick={() => handleItemToggle(item.id)}
+                  className="flex-shrink-0 mt-1"
+                >
+                  {item.completed ? (
+                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                      <svg
+                        className="w-4 h-4 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={3}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                      <svg
+                        className="w-4 h-4 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={3}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </div>
+                  )}
+                </button>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
-                      <span className={`text-sm font-medium block ${item.completed ? "line-through text-gray-500" : "text-gray-900"}`}>
+                      <span className={`text-sm font-medium block ${item.completed ? "text-green-700" : "text-red-700"}`}>
                         {item.text}
                       </span>
                       {item.description && (
-                        <p className={`text-xs mt-1 text-gray-600 ${item.completed ? "line-through" : ""}`}>
+                        <p className={`text-xs mt-1 text-gray-600`}>
                           {item.description}
                         </p>
                       )}
@@ -257,10 +313,10 @@ export default function ReportPage() {
                     </div>
                   )}
 
-                  {/* Загрузка фото для незавершенных пунктов */}
+                  {/* Загрузка фото для незавершенных пунктов (крестик) */}
                   {!item.completed && (
                     <div className="mt-3">
-                      <p className="text-xs text-gray-500 mb-2">Приложите фото (обязательно):</p>
+                      <p className="text-xs text-red-600 mb-2 font-medium">Приложите фото (обязательно):</p>
                       {item.report_photo ? (
                         <div className="relative">
                           <div className="w-full max-w-xs h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center mb-2">
@@ -291,9 +347,9 @@ export default function ReportPage() {
                             }}
                             className="hidden"
                           />
-                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-[#DBEDAE] transition-colors max-w-xs">
+                          <div className="border-2 border-dashed border-red-300 rounded-lg p-4 text-center cursor-pointer hover:border-red-400 transition-colors max-w-xs">
                             <svg
-                              className="w-8 h-8 text-gray-400 mx-auto mb-2"
+                              className="w-8 h-8 text-red-400 mx-auto mb-2"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -305,24 +361,10 @@ export default function ReportPage() {
                                 d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                               />
                             </svg>
-                            <p className="text-sm text-gray-600">Нажмите для загрузки фото</p>
+                            <p className="text-sm text-red-600">Нажмите для загрузки фото</p>
                           </div>
                         </label>
                       )}
-                    </div>
-                  )}
-
-                  {/* Показать загруженное фото для завершенных пунктов */}
-                  {item.completed && item.report_photo && (
-                    <div className="mt-3">
-                      <p className="text-xs text-gray-500 mb-2">Приложенное фото:</p>
-                      <div className="w-full max-w-xs h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
-                        <img
-                          src={item.report_photo}
-                          alt="Фото отчета"
-                          className="max-w-full max-h-full object-contain"
-                        />
-                      </div>
                     </div>
                   )}
                 </div>
@@ -348,6 +390,109 @@ export default function ReportPage() {
           </button>
         </div>
       </div>
+
+      {/* Финальная модалка с результатами */}
+      {showFinalModal && report && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold text-black mb-4">Результаты проверки</h2>
+              
+              {/* Баллы */}
+              <div className="mb-6 p-4 bg-[#DBEDAE] rounded-lg">
+                <p className="text-lg font-semibold text-black">
+                  Баллы: {report.score ?? report.items.filter(item => item.completed).length} / {report.items.length}
+                </p>
+              </div>
+
+              {/* Список пунктов с результатами */}
+              <div className="space-y-4 mb-6">
+                {report.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="border border-gray-200 rounded-lg p-4"
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Галочка или крестик */}
+                      <div className="flex-shrink-0 mt-1">
+                        {item.completed ? (
+                          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                            <svg
+                              className="w-4 h-4 text-white"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={3}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          </div>
+                        ) : (
+                          <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                            <svg
+                              className="w-4 h-4 text-white"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={3}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <span className={`text-sm font-medium block ${item.completed ? "text-green-700" : "text-red-700"}`}>
+                          {item.text}
+                        </span>
+                        {item.description && (
+                          <p className="text-xs mt-1 text-gray-600">
+                            {item.description}
+                          </p>
+                        )}
+                        
+                        {/* Показываем фото только для незавершенных пунктов (крестик) */}
+                        {!item.completed && item.report_photo && (
+                          <div className="mt-3">
+                            <p className="text-xs text-gray-500 mb-2">Приложенное фото:</p>
+                            <div className="w-full max-w-xs h-48 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                              <img
+                                src={item.report_photo}
+                                alt="Фото отчета"
+                                className="max-w-full max-h-full object-contain"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Кнопка закрытия */}
+              <button
+                onClick={() => {
+                  setShowFinalModal(false);
+                  router.push("/reports");
+                }}
+                className="w-full px-4 py-2 bg-[#DBEDAE] text-black rounded-lg hover:bg-[#DBEDAE]/80 transition-colors font-medium"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
