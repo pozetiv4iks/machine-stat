@@ -9,8 +9,52 @@ export default function LoadingScreen() {
   const [isFading, setIsFading] = useState(false);
   const [showLogo, setShowLogo] = useState(false);
   const [showText, setShowText] = useState(false);
+  const [userName, setUserName] = useState<string>('');
+  const [userId, setUserId] = useState<string>('');
 
   useEffect(() => {
+    // Получаем данные пользователя из sessionStorage или Telegram Web App
+    const getUserInfo = () => {
+      if (typeof window === 'undefined') return;
+
+      // Сначала пробуем получить из sessionStorage
+      const storedUserName = sessionStorage.getItem('current_user_name');
+      const storedUserId = sessionStorage.getItem('current_user_id');
+
+      if (storedUserName) {
+        setUserName(storedUserName);
+      }
+      if (storedUserId) {
+        setUserId(storedUserId);
+      }
+
+      // Если нет в sessionStorage, пробуем получить из Telegram Web App
+      if (!storedUserName || !storedUserId) {
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg?.initDataUnsafe?.user) {
+          const telegramUser = tg.initDataUnsafe.user;
+          const tgUserName = telegramUser.username 
+            ? `@${telegramUser.username}` 
+            : `@id${telegramUser.id}`;
+          
+          if (!storedUserName) {
+            setUserName(tgUserName);
+          }
+          if (!storedUserId && telegramUser.id) {
+            setUserId(telegramUser.id.toString());
+          }
+        }
+      }
+    };
+
+    // Получаем информацию о пользователе
+    getUserInfo();
+
+    // Периодически проверяем обновление данных (на случай, если они появятся позже)
+    const checkInterval = setInterval(() => {
+      getUserInfo();
+    }, 500);
+
     // Логотип появляется сразу
     setShowLogo(true);
     
@@ -27,6 +71,9 @@ export default function LoadingScreen() {
           waitForUserInitialization(),
           new Promise(resolve => setTimeout(resolve, 1000))
         ]);
+        
+        // После инициализации обновляем данные пользователя
+        getUserInfo();
       } catch (error) {
         console.error("Error waiting for user initialization:", error);
       } finally {
@@ -44,6 +91,7 @@ export default function LoadingScreen() {
 
     return () => {
       clearTimeout(textTimer);
+      clearInterval(checkInterval);
     };
   }, []);
 
@@ -89,6 +137,24 @@ export default function LoadingScreen() {
           Miran MiniApp
         </h1>
       </div>
+
+      {/* Информация о пользователе внизу */}
+      {(userName || userId) && (
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
+          <div className="text-sm text-gray-600 space-y-1">
+            {userName && (
+              <div className="font-medium">
+                Логин: <span className="text-gray-800">{userName}</span>
+              </div>
+            )}
+            {userId && (
+              <div className="font-medium">
+                ID: <span className="text-gray-800">{userId}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
