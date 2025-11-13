@@ -7,11 +7,26 @@ export default function AccessDenied() {
   const [userId, setUserId] = useState<string>('');
 
   useEffect(() => {
-    // Получаем данные пользователя из sessionStorage или Telegram Web App
+    // Получаем данные пользователя из Telegram Web App или sessionStorage
     const getUserInfo = () => {
       if (typeof window === 'undefined') return;
 
-      // Сначала пробуем получить из sessionStorage
+      // Приоритет: сначала пробуем получить из Telegram Web App (самый актуальный источник)
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.initDataUnsafe?.user) {
+        const telegramUser = tg.initDataUnsafe.user;
+        const tgUserName = telegramUser.username 
+          ? `@${telegramUser.username}` 
+          : `@id${telegramUser.id}`;
+        
+        setUserName(tgUserName);
+        if (telegramUser.id) {
+          setUserId(telegramUser.id.toString());
+        }
+        return; // Если получили данные из Telegram, выходим
+      }
+
+      // Если Telegram Web App недоступен, пробуем получить из sessionStorage
       const storedUserName = sessionStorage.getItem('current_user_name');
       const storedUserId = sessionStorage.getItem('current_user_id');
 
@@ -21,27 +36,19 @@ export default function AccessDenied() {
       if (storedUserId) {
         setUserId(storedUserId);
       }
-
-      // Если нет в sessionStorage, пробуем получить из Telegram Web App
-      if (!storedUserName || !storedUserId) {
-        const tg = (window as any).Telegram?.WebApp;
-        if (tg?.initDataUnsafe?.user) {
-          const telegramUser = tg.initDataUnsafe.user;
-          const tgUserName = telegramUser.username 
-            ? `@${telegramUser.username}` 
-            : `@id${telegramUser.id}`;
-          
-          if (!storedUserName) {
-            setUserName(tgUserName);
-          }
-          if (!storedUserId && telegramUser.id) {
-            setUserId(telegramUser.id.toString());
-          }
-        }
-      }
     };
 
+    // Получаем информацию сразу
     getUserInfo();
+
+    // Периодически проверяем обновление данных
+    const checkInterval = setInterval(() => {
+      getUserInfo();
+    }, 500);
+
+    return () => {
+      clearInterval(checkInterval);
+    };
   }, []);
 
   return (
@@ -97,22 +104,28 @@ export default function AccessDenied() {
       </div>
 
       {/* Информация о пользователе внизу */}
-      {(userName || userId) && (
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
-          <div className="text-sm text-gray-600 space-y-1">
-            {userName && (
-              <div className="font-medium">
-                Логин: <span className="text-gray-800">{userName}</span>
-              </div>
-            )}
-            {userId && (
-              <div className="font-medium">
-                ID: <span className="text-gray-800">{userId}</span>
-              </div>
-            )}
-          </div>
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
+        <div className="text-sm text-gray-600 space-y-1">
+          {userName ? (
+            <div className="font-medium">
+              Логин: <span className="text-gray-800">{userName}</span>
+            </div>
+          ) : (
+            <div className="font-medium text-gray-400">
+              Логин: не определен
+            </div>
+          )}
+          {userId ? (
+            <div className="font-medium">
+              ID: <span className="text-gray-800">{userId}</span>
+            </div>
+          ) : (
+            <div className="font-medium text-gray-400">
+              ID: не определен
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
