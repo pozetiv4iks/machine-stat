@@ -182,7 +182,6 @@ export default function ChecklistCreateModal({
           title: title.trim(),
           description: description.trim() || undefined,
           items: checklistItems,
-          status: "Не начато",
         });
       }
 

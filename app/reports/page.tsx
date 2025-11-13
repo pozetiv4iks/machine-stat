@@ -56,11 +56,17 @@ export default function ReportsPage() {
 
   const getStatusColor = (status: string) => {
     const statusLower = status.toLowerCase();
-    if (statusLower.includes("завершено") || statusLower.includes("completed")) {
+    if (statusLower.includes("закончен") || statusLower.includes("завершено") || statusLower.includes("completed")) {
       return "bg-green-100 text-green-700";
     }
-    if (statusLower.includes("процесс") || statusLower.includes("progress")) {
+    if (statusLower.includes("в процессе") || statusLower.includes("процесс") || statusLower.includes("progress")) {
       return "bg-yellow-100 text-yellow-700";
+    }
+    if (statusLower.includes("начат") || statusLower.includes("started")) {
+      return "bg-blue-100 text-blue-700";
+    }
+    if (statusLower.includes("пропущен") || statusLower.includes("skipped")) {
+      return "bg-red-100 text-red-700";
     }
     return "bg-gray-100 text-gray-700";
   };

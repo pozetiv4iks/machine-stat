@@ -110,12 +110,15 @@ export default function ReportPage() {
       // Определяем статус на основе завершенных пунктов
       const allCompleted = report.items.every(item => item.completed);
       const someCompleted = report.items.some(item => item.completed);
+      const noneCompleted = !report.items.some(item => item.completed);
       
-      let newStatus = "Не начато";
+      let newStatus = "не начат";
       if (allCompleted) {
-        newStatus = "Завершено";
+        newStatus = "закончен";
       } else if (someCompleted) {
-        newStatus = "В процессе";
+        newStatus = "в процессе";
+      } else if (noneCompleted) {
+        newStatus = "не начат";
       }
 
       await updateReport(report.id, {

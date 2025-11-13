@@ -8,6 +8,7 @@ interface UserSelectModalProps {
   onClose: () => void;
   onSelect: (userName: string) => void;
   title: string;
+  excludeUser?: string[]; // Пользователи, уже выбранные в других отделах
 }
 
 export default function UserSelectModal({
@@ -15,6 +16,7 @@ export default function UserSelectModal({
   onClose,
   onSelect,
   title,
+  excludeUser = [],
 }: UserSelectModalProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -42,6 +44,17 @@ export default function UserSelectModal({
     return user.full_name || user.username || "Без имени";
   };
 
+  const isUserSelected = (user: User) => {
+    const displayName = getUserDisplayName(user);
+    return excludeUser.some(excluded => 
+      excluded === displayName || 
+      excluded === user.full_name || 
+      excluded === user.username ||
+      (excluded.startsWith('@') && user.username === excluded.substring(1)) ||
+      (!excluded.startsWith('@') && user.username === `@${excluded}`)
+    );
+  };
+
   const filteredUsers = users.filter((user) => {
     const query = searchQuery.toLowerCase();
     const name = user.full_name || user.username || "";
@@ -50,6 +63,10 @@ export default function UserSelectModal({
   });
 
   const handleSelectUser = (user: User) => {
+    // Не позволяем выбрать уже выбранного пользователя
+    if (isUserSelected(user)) {
+      return;
+    }
     const displayName = getUserDisplayName(user);
     onSelect(displayName);
     onClose();
@@ -58,7 +75,7 @@ export default function UserSelectModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
@@ -122,20 +139,37 @@ export default function UserSelectModal({
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredUsers.map((user) => (
-                <button
-                  key={user.id}
-                  onClick={() => handleSelectUser(user)}
-                  className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
-                >
-                  <p className="font-medium text-black">{getUserDisplayName(user)}</p>
-                  {user.username && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      {user.username.startsWith("@") ? user.username : `@${user.username}`}
-                    </p>
-                  )}
-                </button>
-              ))}
+              {filteredUsers.map((user) => {
+                const isSelected = isUserSelected(user);
+                return (
+                  <button
+                    key={user.id}
+                    onClick={() => handleSelectUser(user)}
+                    disabled={isSelected}
+                    className={`w-full text-left px-4 py-3 rounded-lg transition-colors border ${
+                      isSelected
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200"
+                        : "hover:bg-gray-100 border-transparent hover:border-gray-200"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className={`font-medium ${isSelected ? "text-gray-400" : "text-black"}`}>
+                          {getUserDisplayName(user)}
+                        </p>
+                        {user.username && (
+                          <p className={`text-sm mt-1 ${isSelected ? "text-gray-400" : "text-gray-500"}`}>
+                            {user.username.startsWith("@") ? user.username : `@${user.username}`}
+                          </p>
+                        )}
+                      </div>
+                      {isSelected && (
+                        <span className="text-xs text-gray-400 ml-2 whitespace-nowrap">уже выбран</span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

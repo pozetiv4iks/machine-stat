@@ -119,7 +119,7 @@ export default function DateDetailsModal({
   };
 
   const handleClearChecklist = (index: number) => {
-    handleDepartmentChange(index, "checklist_id", 0);
+    handleDepartmentChange(index, "checklist_id", undefined);
     handleDepartmentChange(index, "check", "Ежедневная проверка");
   };
 
@@ -169,7 +169,7 @@ export default function DateDetailsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 pb-10">
           <div className="flex items-center justify-between mb-6">
@@ -367,12 +367,35 @@ export default function DateDetailsModal({
             ? "Выберите проверяющего"
             : "Выберите участника встречи"
         }
+        excludeUser={
+          userSelectModal.field && userSelectModal.departmentIndex !== null
+            ? editedDepartments
+                .map((dept, idx) => 
+                  idx !== userSelectModal.departmentIndex 
+                    ? (userSelectModal.field === "inspector" ? dept.inspector : dept.meeting)
+                    : null
+                )
+                .filter(Boolean)
+            : []
+        }
       />
 
       {/* Модалка выбора чеклиста */}
       {checklistSelectModal.isOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4">
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() =>
+              setChecklistSelectModal({
+                isOpen: false,
+                departmentIndex: null,
+              })
+            }
+          />
+          <div 
+            className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto relative z-50"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-black">Выберите чеклист</h3>
@@ -413,7 +436,10 @@ export default function DateDetailsModal({
                   {checklists.map((checklist) => (
                     <button
                       key={checklist.id}
-                      onClick={() => handleSelectChecklist(checklist.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectChecklist(checklist.id);
+                      }}
                       className="w-full text-left px-4 py-3 border border-gray-200 rounded-lg hover:bg-[#DBEDAE]/20 hover:border-[#DBEDAE] transition-colors"
                     >
                       <p className="font-medium text-black">{checklist.title || "Без названия"}</p>

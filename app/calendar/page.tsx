@@ -242,6 +242,21 @@ export default function CalendarPage() {
 
   const [departmentsData, setDepartmentsData] = useState<{ [key: string]: any[] }>({});
 
+  // Загружаем данные из localStorage при монтировании
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('calendar_departments');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setDepartmentsData(parsed);
+        }
+      } catch (error) {
+        console.error('Error loading calendar departments from localStorage:', error);
+      }
+    }
+  }, []);
+
   // Моковые данные для отделов (в реальном приложении это будет из API)
   const getDepartmentsForDate = (date: Date) => {
     const dateKey = date.toISOString().split("T")[0];
@@ -257,16 +272,19 @@ export default function CalendarPage() {
         check: "Ежедневная проверка",
         inspector: "",
         meeting: "",
+        checklist_id: undefined,
       },
       {
         check: "Ежедневная проверка",
         inspector: "",
         meeting: "",
+        checklist_id: undefined,
       },
       {
         check: "Ежедневная проверка",
         inspector: "",
         meeting: "",
+        checklist_id: undefined,
       },
     ];
   };
@@ -274,10 +292,21 @@ export default function CalendarPage() {
   const handleSaveDepartments = async (departments: any[]) => {
     if (selectedDate) {
       const dateKey = selectedDate.toISOString().split("T")[0];
-      setDepartmentsData((prev) => ({
-        ...prev,
+      const updatedData = {
+        ...departmentsData,
         [dateKey]: departments,
-      }));
+      };
+      setDepartmentsData(updatedData);
+      
+      // Сохраняем в localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('calendar_departments', JSON.stringify(updatedData));
+        } catch (error) {
+          console.error('Error saving calendar departments to localStorage:', error);
+        }
+      }
+      
       // Обновляем календарь для перерисовки статусов дней
       setRefreshKey((prev) => prev + 1);
       
@@ -287,46 +316,58 @@ export default function CalendarPage() {
       
       for (let i = 0; i < departments.length; i++) {
         const dept = departments[i];
-        if (dept.inspector && dept.checklist_id) {
+        // Проверяем, что есть и проверяющий, и чеклист
+        if (dept.inspector && dept.inspector.trim() && dept.checklist_id) {
           // Находим ID проверяющего по имени
           const inspector = users.find(u => 
-            u.full_name === dept.inspector || u.username === dept.inspector
+            u.full_name === dept.inspector || u.username === dept.inspector || 
+            (dept.inspector.startsWith('@') && u.username === dept.inspector.substring(1)) ||
+            (!dept.inspector.startsWith('@') && u.username === `@${dept.inspector}`)
           );
           
           if (inspector) {
-            // Получаем чеклист
-            const checklist = await getChecklistById(dept.checklist_id);
-            
-            // Создаем элементы отчета на основе чеклиста
-            const reportItems = (checklist.items || []).map((item, index) => ({
-              id: index + 1,
-              checklist_item_id: item.id,
-              text: item.text,
-              completed: false,
-              description: item.description,
-              reference_image: item.reference_image,
-            }));
-            
-            // Проверяем, существует ли уже отчет
-            const { getReports } = await import("@/assets/api");
-            const existingReports = await getReports(inspector.id);
-            const existingReport = existingReports.find(r => 
-              r.date === dateKey && 
-              r.checklist_id === dept.checklist_id &&
-              r.department_index === i
-            );
-            
-            if (!existingReport) {
-              // Создаем новый отчет
-              await createReport({
-                date: dateKey,
-                inspector_id: inspector.id,
-                checklist_id: dept.checklist_id,
-                department_index: i,
-                items: reportItems,
-                status: "Не начато",
-              });
+            try {
+              // Получаем чеклист
+              const checklist = await getChecklistById(dept.checklist_id);
+              
+              // Создаем элементы отчета на основе чеклиста
+              const reportItems = (checklist.items || []).map((item, index) => ({
+                id: index + 1,
+                checklist_item_id: item.id,
+                text: item.text,
+                completed: false,
+                description: item.description,
+                reference_image: item.reference_image,
+              }));
+              
+              // Проверяем, существует ли уже отчет
+              const { getReports } = await import("@/assets/api");
+              const existingReports = await getReports(inspector.id);
+              const existingReport = existingReports.find(r => 
+                r.date === dateKey && 
+                r.checklist_id === dept.checklist_id &&
+                r.department_index === i
+              );
+              
+              if (!existingReport) {
+                // Создаем новый отчет
+                await createReport({
+                  date: dateKey,
+                  inspector_id: inspector.id,
+                  checklist_id: dept.checklist_id,
+                  department_index: i,
+                  items: reportItems,
+                  status: "не начат",
+                });
+                console.log(`[Calendar] Created report for inspector ${inspector.id}, checklist ${dept.checklist_id}, department ${i}`);
+              } else {
+                console.log(`[Calendar] Report already exists for inspector ${inspector.id}, checklist ${dept.checklist_id}, department ${i}`);
+              }
+            } catch (error) {
+              console.error(`[Calendar] Error creating report for department ${i}:`, error);
             }
+          } else {
+            console.warn(`[Calendar] Inspector not found for: ${dept.inspector}`);
           }
         }
       }

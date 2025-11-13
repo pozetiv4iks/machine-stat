@@ -115,7 +115,7 @@ export interface Report {
   checklist_id: number;
   department_index: number;
   items: ReportItem[];
-  status: string; // "Не начато", "В процессе", "Завершено"
+  status: string; // "не начат", "начат", "в процессе", "закончен", "пропущен"
   score?: number; // Баллы (количество выполненных пунктов)
   created_at: string;
   updated_at: string;
