@@ -118,10 +118,6 @@ export default function ReportPage() {
         newStatus = "В процессе";
       }
 
-      if (!report.id) {
-        throw new Error("Report ID is missing");
-      }
-
       await updateReport(report.id, {
         ...report,
         status: newStatus,

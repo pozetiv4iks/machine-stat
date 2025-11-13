@@ -36,6 +36,7 @@ export default function TelegramUserInitializer() {
       const alreadyInitialized = sessionStorage.getItem(sessionKey);
       
       if (alreadyInitialized === "true") {
+        // Если уже инициализировано, просто устанавливаем статус
         setInitialized(true);
         return;
       }
@@ -49,6 +50,9 @@ export default function TelegramUserInitializer() {
         const tg = (window as any).Telegram?.WebApp;
         if (!tg?.initDataUnsafe?.user) {
           console.warn("Telegram Web App user data not available");
+          // Если нет данных Telegram, считаем что нет доступа
+          sessionStorage.setItem("user_has_access", "false");
+          sessionStorage.setItem(sessionKey, "true");
           setInitialized(true);
           return;
         }
@@ -58,14 +62,20 @@ export default function TelegramUserInitializer() {
           ? `@${telegramUser.username}` 
           : `@id${telegramUser.id}`;
 
-        // 2. Проверяем доступ через check-access (реальный API с fallback на моковые данные)
+        // 2. Проверяем доступ через check-access
         const accessResponse = await checkUserAccess(userName);
         
         if (!accessResponse.has_access || !accessResponse.user) {
           console.warn("User does not have access:", accessResponse.message);
+          // Сохраняем информацию о том, что пользователь не имеет доступа
+          sessionStorage.setItem("user_has_access", "false");
+          sessionStorage.setItem(sessionKey, "true");
           setInitialized(true);
           return;
         }
+
+        // Сохраняем информацию о том, что пользователь имеет доступ
+        sessionStorage.setItem("user_has_access", "true");
 
         // 3. Получаем полные данные пользователя
         let user = await getUserByUsername(userName);
@@ -92,11 +102,15 @@ export default function TelegramUserInitializer() {
         sessionStorage.setItem("current_user_id", user.id.toString());
         sessionStorage.setItem("current_user_name", user.user_name || user.username || "");
         sessionStorage.setItem("current_user_role", user.role || "");
+        sessionStorage.setItem("user_has_access", "true");
         sessionStorage.setItem(sessionKey, "true");
         
         console.log("User initialized from Telegram:", user);
       } catch (error) {
         console.error("Error initializing user from Telegram:", error);
+        // В случае ошибки считаем что нет доступа
+        sessionStorage.setItem("user_has_access", "false");
+        sessionStorage.setItem(sessionKey, "true");
       } finally {
         setInitialized(true);
       }

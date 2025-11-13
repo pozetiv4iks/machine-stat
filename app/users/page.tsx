@@ -11,6 +11,7 @@ export default function UsersPage() {
   const [activeTab, setActiveTab] = useState<"users" | "roles">("users");
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [departments, setDepartments] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [rolesLoading, setRolesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,12 +30,38 @@ export default function UsersPage() {
   const [deletingRole, setDeletingRole] = useState(false);
 
   useEffect(() => {
-    if (activeTab === "users") {
-      loadUsers();
-    } else {
-      loadRoles();
+    // При первой загрузке загружаем все данные
+    loadAllData();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "roles") {
+      loadRolesAndDepartments();
     }
   }, [activeTab]);
+
+  const loadAllData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Загружаем пользователей, роли и отделы параллельно
+      const [usersData, rolesData, departmentsData] = await Promise.all([
+        getUsers(),
+        getRoles("role"),
+        getRoles("department")
+      ]);
+      
+      setUsers(usersData);
+      setRoles(rolesData);
+      setDepartments(departmentsData);
+    } catch (err) {
+      setError("Не удалось загрузить данные");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -50,12 +77,19 @@ export default function UsersPage() {
     }
   };
 
-  const loadRoles = async () => {
+  const loadRolesAndDepartments = async () => {
     try {
       setRolesLoading(true);
       setError(null);
-      const data = await getRoles();
-      setRoles(data);
+      
+      // Загружаем роли и отделы параллельно
+      const [rolesData, departmentsData] = await Promise.all([
+        getRoles("role"),
+        getRoles("department")
+      ]);
+      
+      setRoles(rolesData);
+      setDepartments(departmentsData);
     } catch (err) {
       setError("Не удалось загрузить роли и отделы");
       console.error(err);
@@ -136,9 +170,7 @@ export default function UsersPage() {
 
   const handleEditRole = (role: Role) => {
     setEditingRole(role);
-    // Используем "role" по умолчанию, если type не определен
-    const roleTypeValue: "role" | "department" = role.type === "department" ? "department" : "role";
-    setRoleType(roleTypeValue);
+    setRoleType(role.type);
     setIsRoleModalOpen(true);
   };
 
@@ -154,17 +186,14 @@ export default function UsersPage() {
   };
 
   const handleConfirmDeleteRole = async () => {
-    if (!roleToDelete || roleToDelete.id === undefined) {
-      alert("Не удалось удалить роль/отдел: ID не найден");
-      return;
-    }
+    if (!roleToDelete) return;
 
     try {
       setDeletingRole(true);
       await deleteRole(roleToDelete.id);
       setIsRoleDeleteModalOpen(false);
       setRoleToDelete(null);
-      loadRoles();
+      loadRolesAndDepartments();
     } catch (err) {
       console.error("Не удалось удалить роль/отдел", err);
       alert("Не удалось удалить роль/отдел");
@@ -180,8 +209,9 @@ export default function UsersPage() {
     }
   };
 
-  const rolesList = roles.filter(r => r.type === "role");
-  const departmentsList = roles.filter(r => r.type === "department");
+  // Используем отдельные состояния для ролей и отделов
+  const rolesList = roles;
+  const departmentsList = departments;
 
   return (
     <div className="min-h-screen bg-white pb-20 relative overflow-hidden">
@@ -624,7 +654,7 @@ export default function UsersPage() {
           setIsRoleModalOpen(false);
           setEditingRole(null);
         }}
-        onSave={loadRoles}
+        onSave={loadRolesAndDepartments}
         type={roleType}
       />
 

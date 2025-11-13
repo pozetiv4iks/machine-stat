@@ -142,7 +142,7 @@ export default function UserEditModal({
         }
       }
 
-      if (user && user.id) {
+      if (user) {
         // Режим редактирования
         await updateUser(user.id, normalizedFormData);
       } else {

@@ -38,13 +38,7 @@ export default function ChecklistCreateModal({
     if (isOpen && checklist) {
       // Режим редактирования - заполняем форму данными чеклиста
       setTitle(checklist.title || "");
-      // Обрабатываем description как строку или массив строк
-      const descriptionValue = checklist.description 
-        ? (Array.isArray(checklist.description) 
-            ? checklist.description.join('\n') 
-            : checklist.description)
-        : "";
-      setDescription(descriptionValue);
+      setDescription(checklist.description || "");
       if (checklist.items && checklist.items.length > 0) {
         setItems(
           checklist.items.map((item, index) => ({
@@ -138,7 +132,7 @@ export default function ChecklistCreateModal({
         }))
       );
 
-      if (isEditMode && checklist && checklist.id) {
+      if (isEditMode && checklist) {
         // Режим редактирования
         await updateChecklist(checklist.id, {
           title: title.trim(),

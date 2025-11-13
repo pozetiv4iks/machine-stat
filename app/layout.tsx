@@ -4,6 +4,7 @@ import "./globals.css";
 import Navigation from "./components/Navigation";
 import LoadingScreen from "./components/LoadingScreen";
 import TelegramUserInitializer from "./components/TelegramUserInitializer";
+import AccessGuard from "./components/AccessGuard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,8 +33,10 @@ export default function RootLayout({
       >
         <TelegramUserInitializer />
         <LoadingScreen />
-        <main>{children}</main>
-        <Navigation />
+        <AccessGuard>
+          <main>{children}</main>
+          <Navigation />
+        </AccessGuard>
       </body>
     </html>
   );

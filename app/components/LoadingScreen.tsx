@@ -59,21 +59,22 @@ export default function LoadingScreen() {
       <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-[#E1F5C6] rounded-full blur-3xl opacity-40 -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-[#E1F5C6] rounded-full blur-3xl opacity-40 translate-x-1/2 translate-y-1/2" />
       
-      <div className="relative z-10 flex items-center gap-4">
+      <div className="relative z-10 flex items-center">
         {/* Логотип */}
         <div 
-          className={`transition-all duration-700 ${
+          className={`transition-all duration-700 -mr-2 ${
             showLogo 
               ? 'opacity-100 scale-100' 
               : 'opacity-0 scale-90'
           }`}
         >
           <Image 
-            src="/sdamdf.png" 
+            src="/logo.png" 
             alt="Logo" 
-            width={60} 
-            height={60}
+            width={200} 
+            height={200}
             className="object-contain"
+            priority
           />
         </div>
 

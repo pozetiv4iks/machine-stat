@@ -49,11 +49,7 @@ export default function ChecklistsPage() {
     const query = searchQuery.toLowerCase();
     const title = checklist.title || "";
     const description = checklist.description || "";
-    // Обрабатываем description как строку или массив строк
-    const descriptionStr = Array.isArray(description) 
-      ? description.join(' ').toLowerCase()
-      : description.toLowerCase();
-    return title.toLowerCase().includes(query) || descriptionStr.includes(query);
+    return title.toLowerCase().includes(query) || description.toLowerCase().includes(query);
   });
 
   const formatDate = (dateString?: string) => {
