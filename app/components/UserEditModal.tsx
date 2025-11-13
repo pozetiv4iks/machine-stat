@@ -93,13 +93,12 @@ export default function UserEditModal({
         role: user.role || "",
       });
     } else {
-      // Режим создания нового пользователя - автоматически заполняем Telegram ID
-      const currentTelegramId = getCurrentTelegramId();
+      // Режим создания нового пользователя
       setFormData({
         first_name: "",
         last_name: "",
         username: "",
-        telegram_id: currentTelegramId || "",
+        telegram_id: "",
         role: "",
       });
     }
@@ -121,25 +120,15 @@ export default function UserEditModal({
         .trim();
 
       // Нормализуем логин перед отправкой (убеждаемся, что есть @)
-      let normalizedFormData = {
+      let normalizedFormData: any = {
         full_name: fullName,
         username: normalizeUsername(formData.username),
-        telegram_id: formData.telegram_id,
         role: formData.role,
       };
 
-      // При создании нового пользователя убеждаемся, что Telegram ID заполнен
-      if (!user) {
-        if (!normalizedFormData.telegram_id) {
-          const currentTelegramId = getCurrentTelegramId();
-          if (currentTelegramId) {
-            normalizedFormData.telegram_id = currentTelegramId;
-          } else {
-            setError("Не удалось получить Telegram ID. Пожалуйста, войдите в приложение через Telegram.");
-            setLoading(false);
-            return;
-          }
-        }
+      // Telegram ID необязателен - добавляем только если указан
+      if (formData.telegram_id && formData.telegram_id.trim()) {
+        normalizedFormData.telegram_id = formData.telegram_id.trim();
       }
 
       if (user) {
@@ -245,21 +234,15 @@ export default function UserEditModal({
             {/* Telegram ID */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Telegram ID
+                Telegram ID (необязательно)
               </label>
               <input
                 type="text"
                 value={formData.telegram_id || ""}
                 onChange={(e) => handleChange("telegram_id", e.target.value)}
                 placeholder="@username"
-                disabled={!user} // При создании нового пользователя поле только для чтения
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E1F5C6] focus:border-transparent text-black disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-600"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E1F5C6] focus:border-transparent text-black"
               />
-              {!user && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Заполняется автоматически из вашей сессии
-                </p>
-              )}
             </div>
 
             {/* Роль */}

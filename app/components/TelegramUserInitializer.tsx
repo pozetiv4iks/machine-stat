@@ -46,7 +46,21 @@ export default function TelegramUserInitializer() {
       // Просто устанавливаем флаг инициализации и доступ
       // Всегда даем доступ к интерфейсу супер админа
       sessionStorage.setItem("user_has_access", "true");
-      sessionStorage.setItem("current_user_role", "админ");
+      
+      // Инициализируем localStorage
+      if (typeof window !== 'undefined') {
+        const { initializeStorageFromMocks, getCurrentRole, setCurrentRole } = await import('../utils/localStorage');
+        initializeStorageFromMocks();
+        
+        // Устанавливаем роль по умолчанию, если не установлена
+        const currentRole = getCurrentRole();
+        if (!currentRole) {
+          setCurrentRole("супер админ");
+        } else {
+          sessionStorage.setItem("current_user_role", currentRole);
+        }
+      }
+      
       sessionStorage.setItem(sessionKey, "true");
       setInitialized(true);
     };

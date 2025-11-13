@@ -211,7 +211,7 @@ export default function ChecklistCreateModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-md">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/30 backdrop-blur-md">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col mx-4">
         {/* Заголовок */}
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">

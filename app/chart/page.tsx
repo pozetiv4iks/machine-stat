@@ -10,6 +10,12 @@ export default function ChartPage() {
   const [period, setPeriod] = useState<string>("week");
 
   useEffect(() => {
+    // При первой загрузке сбрасываем на первый период
+    setPeriod("week");
+  }, []);
+
+  useEffect(() => {
+    // Загружаем данные при изменении периода
     loadChartData(period);
   }, [period]);
 

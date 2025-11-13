@@ -30,7 +30,9 @@ export default function UsersPage() {
   const [deletingRole, setDeletingRole] = useState(false);
 
   useEffect(() => {
-    // При первой загрузке загружаем все данные
+    // При первой загрузке сбрасываем на первую вкладку и загружаем все данные
+    setActiveTab("users");
+    setRoleType("role");
     loadAllData();
   }, []);
 
@@ -81,13 +83,10 @@ export default function UsersPage() {
     try {
       setRolesLoading(true);
       setError(null);
-      
-      // Загружаем роли и отделы параллельно
       const [rolesData, departmentsData] = await Promise.all([
         getRoles("role"),
         getRoles("department")
       ]);
-      
       setRoles(rolesData);
       setDepartments(departmentsData);
     } catch (err) {
@@ -98,48 +97,13 @@ export default function UsersPage() {
     }
   };
 
-  const filteredUsers = users.filter((user) => {
-    // Фильтр по поисковому запросу
-    const query = searchQuery.toLowerCase();
-    const name = user.full_name || user.username || "";
-    const username = user.username || "";
-    const telegramId = user.telegram_id || "";
-    const matchesSearch = name.toLowerCase().includes(query) || username.toLowerCase().includes(query) || telegramId.toLowerCase().includes(query);
-    
-    // Фильтр по роли
-    const matchesRole = !selectedRole || user.role === selectedRole;
-    
-    return matchesSearch && matchesRole;
-  });
-
-  const getUserDisplayName = (user: User) => {
-    return user.full_name || user.username || "Без имени";
-  };
-
-  const getUserRole = (user: User) => {
-    return user.role || "Пользователь";
-  };
-
-  const handleEditUser = (user: User) => {
-    setSelectedUser(user);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
+  const handleSaveUser = async () => {
+    await loadUsers();
     setIsModalOpen(false);
     setSelectedUser(null);
   };
 
-  const handleSaveUser = () => {
-    loadUsers(); // Перезагружаем список пользователей после сохранения
-  };
-
-  const handleAddUser = () => {
-    setSelectedUser(null);
-    setIsModalOpen(true);
-  };
-
-  const handleDeleteUser = (user: User) => {
+  const handleDeleteUser = async (user: User) => {
     setUserToDelete(user);
     setIsDeleteModalOpen(true);
   };
@@ -152,7 +116,7 @@ export default function UsersPage() {
       await deleteUser(userToDelete.id);
       setIsDeleteModalOpen(false);
       setUserToDelete(null);
-      loadUsers(); // Перезагружаем список пользователей после удаления
+      await loadUsers();
     } catch (err) {
       console.error("Не удалось удалить пользователя", err);
       alert("Не удалось удалить пользователя");
@@ -168,58 +132,84 @@ export default function UsersPage() {
     }
   };
 
-  const handleEditRole = (role: Role) => {
-    setEditingRole(role);
-    setRoleType(role.type || "role");
-    setIsRoleModalOpen(true);
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setIsModalOpen(true);
   };
 
-  const handleAddRole = (type: "role" | "department") => {
+  const handleAddUser = () => {
+    setSelectedUser(null);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveRole = async () => {
+    await loadRolesAndDepartments();
+    setIsRoleModalOpen(false);
     setEditingRole(null);
-    setRoleType(type);
-    setIsRoleModalOpen(true);
+    setRoleType("role");
   };
 
-  const handleDeleteRole = (role: Role) => {
+  const handleDeleteRole = async (role: Role) => {
     setRoleToDelete(role);
     setIsRoleDeleteModalOpen(true);
   };
 
   const handleConfirmDeleteRole = async () => {
-    if (!roleToDelete || roleToDelete.id === undefined) return;
+    if (!roleToDelete) return;
 
     try {
       setDeletingRole(true);
-      await deleteRole(roleToDelete.id);
+      await deleteRole(roleToDelete.id!);
       setIsRoleDeleteModalOpen(false);
       setRoleToDelete(null);
-      loadRolesAndDepartments();
+      await loadRolesAndDepartments();
     } catch (err) {
-      console.error("Не удалось удалить роль/отдел", err);
-      alert("Не удалось удалить роль/отдел");
+      console.error("Не удалось удалить роль", err);
+      alert("Не удалось удалить роль");
     } finally {
       setDeletingRole(false);
     }
   };
 
-  const handleCloseRoleDeleteModal = () => {
+  const handleCloseDeleteRoleModal = () => {
     if (!deletingRole) {
       setIsRoleDeleteModalOpen(false);
       setRoleToDelete(null);
     }
   };
 
-  // Используем отдельные состояния для ролей и отделов
-  const rolesList = roles;
-  const departmentsList = departments;
+  const handleAddRole = (type: "role" | "department") => {
+    setRoleType(type);
+    setEditingRole(null);
+    setIsRoleModalOpen(true);
+  };
+
+  const handleEditRole = (role: Role) => {
+    setRoleType(role.type || "role");
+    setEditingRole(role);
+    setIsRoleModalOpen(true);
+  };
+
+  // Фильтрация пользователей
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch = 
+      user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesRole = !selectedRole || user.role === selectedRole;
+    
+    return matchesSearch && matchesRole;
+  });
+
+  // Объединяем роли и отделы для отображения
+  const rolesList = [...roles, ...departments];
 
   return (
     <div className="min-h-screen bg-white pb-20 relative overflow-hidden">
       {/* Мягкие размытые зеленые области на заднем плане */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* Верхний левый угол */}
         <div 
-          className="absolute rounded-full bg-[#E1F5C6]"
+          className="absolute rounded-full bg-[#DBEDAE]"
           style={{
             width: '700px',
             height: '700px',
@@ -229,9 +219,8 @@ export default function UsersPage() {
             left: '-250px',
           }}
         />
-        {/* Нижний правый угол */}
         <div 
-          className="absolute rounded-full bg-[#E1F5C6]"
+          className="absolute rounded-full bg-[#DBEDAE]"
           style={{
             width: '700px',
             height: '700px',
@@ -340,7 +329,29 @@ export default function UsersPage() {
 
         {/* Список пользователей */}
         {!loading && !error && (
-          <div className="space-y-8">
+          <div className="space-y-4">
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={handleAddUser}
+                className="px-4 py-2 bg-[#DBEDAE] text-black rounded-lg hover:bg-[#DBEDAE]/80 transition-colors font-medium flex items-center gap-2"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                Добавить пользователя
+              </button>
+            </div>
+
             {filteredUsers.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-600">
@@ -351,67 +362,63 @@ export default function UsersPage() {
               filteredUsers.map((user) => (
                 <div
                   key={user.id}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-4"
+                  className="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-black text-lg">
-                        {getUserDisplayName(user)}
-                      </h3>
-                      {user.username && (
-                        <p className="text-sm text-gray-600 mt-1">
-                          {user.username.startsWith("@") ? user.username : `@${user.username}`}
-                        </p>
-                      )}
-                      {user.telegram_id && (
-                        <p className="text-sm text-gray-500 mt-1">Telegram: {user.telegram_id}</p>
-                      )}
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
-                          {getUserRole(user)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleEditUser(user)}
-                        className="p-2 text-gray-600 hover:text-black transition-colors"
-                        aria-label="Редактировать"
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-black text-lg">
+                      {user.full_name || user.username || "Без имени"}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      @{user.username || "без логина"}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Роль: {user.role || "Не указана"}
+                    </p>
+                    {user.telegram_id && (
+                      <p className="text-sm text-gray-600">
+                        Telegram ID: {user.telegram_id}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <button
+                      onClick={() => handleEditUser(user)}
+                      className="w-8 h-8 bg-[#DBEDAE] rounded-full flex items-center justify-center hover:bg-[#DBEDAE]/80 transition-colors"
+                      title="Редактировать"
+                    >
+                      <svg
+                        className="w-4 h-4 text-black"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteUser(user)}
-                        className="p-2 text-gray-600 hover:text-red-600 transition-colors"
-                        aria-label="Удалить"
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteUser(user)}
+                      className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors"
+                      title="Удалить"
+                    >
+                      <svg
+                        className="w-4 h-4 text-red-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
-                    </div>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               ))
@@ -421,7 +428,7 @@ export default function UsersPage() {
           </>
         )}
 
-        {/* Контент вкладки ролей и отделов */}
+        {/* Контент вкладки ролей */}
         {activeTab === "roles" && (
           <>
             {rolesLoading ? (
@@ -464,24 +471,29 @@ export default function UsersPage() {
                       Добавить роль
                     </button>
                   </div>
-                  {rolesList.length === 0 ? (
+                  {rolesList.filter(r => r.type === "role").length === 0 ? (
                     <p className="text-gray-500 text-center py-4">Нет ролей</p>
                   ) : (
                     <div className="space-y-2">
-                      {rolesList.map((role) => (
+                      {rolesList.filter(r => r.type === "role").map((role) => (
                         <div
                           key={role.id}
                           className="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between"
                         >
-                          <span className="font-medium text-black">{role.name}</span>
-                          <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-black">{role.name}</h3>
+                            {role.description && (
+                              <p className="text-sm text-gray-600 mt-1">{role.description}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 ml-4">
                             <button
                               onClick={() => handleEditRole(role)}
-                              className="p-2 text-gray-600 hover:text-black transition-colors"
+                              className="w-8 h-8 bg-[#DBEDAE] rounded-full flex items-center justify-center hover:bg-[#DBEDAE]/80 transition-colors"
                               title="Редактировать"
                             >
                               <svg
-                                className="w-5 h-5"
+                                className="w-4 h-4 text-black"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -496,11 +508,11 @@ export default function UsersPage() {
                             </button>
                             <button
                               onClick={() => handleDeleteRole(role)}
-                              className="p-2 text-gray-600 hover:text-red-600 transition-colors"
+                              className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors"
                               title="Удалить"
                             >
                               <svg
-                                className="w-5 h-5"
+                                className="w-4 h-4 text-red-600"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -544,24 +556,29 @@ export default function UsersPage() {
                       Добавить отдел
                     </button>
                   </div>
-                  {departmentsList.length === 0 ? (
+                  {rolesList.filter(r => r.type === "department").length === 0 ? (
                     <p className="text-gray-500 text-center py-4">Нет отделов</p>
                   ) : (
                     <div className="space-y-2">
-                      {departmentsList.map((department) => (
+                      {rolesList.filter(r => r.type === "department").map((department) => (
                         <div
                           key={department.id}
                           className="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between"
                         >
-                          <span className="font-medium text-black">{department.name}</span>
-                          <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-black">{department.name}</h3>
+                            {department.description && (
+                              <p className="text-sm text-gray-600 mt-1">{department.description}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 ml-4">
                             <button
                               onClick={() => handleEditRole(department)}
-                              className="p-2 text-gray-600 hover:text-black transition-colors"
+                              className="w-8 h-8 bg-[#DBEDAE] rounded-full flex items-center justify-center hover:bg-[#DBEDAE]/80 transition-colors"
                               title="Редактировать"
                             >
                               <svg
-                                className="w-5 h-5"
+                                className="w-4 h-4 text-black"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -576,11 +593,11 @@ export default function UsersPage() {
                             </button>
                             <button
                               onClick={() => handleDeleteRole(department)}
-                              className="p-2 text-gray-600 hover:text-red-600 transition-colors"
+                              className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors"
                               title="Удалить"
                             >
                               <svg
-                                className="w-5 h-5"
+                                className="w-4 h-4 text-red-600"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -605,69 +622,49 @@ export default function UsersPage() {
         )}
       </div>
 
-      {/* Кнопка добавления пользователя */}
-      {activeTab === "users" && (
-        <button
-          onClick={handleAddUser}
-          className="fixed bottom-24 right-6 w-14 h-14 bg-[#DBEDAE] rounded-full shadow-lg flex items-center justify-center hover:bg-[#DBEDAE]/80 transition-colors z-40"
-          aria-label="Добавить пользователя"
-        >
-          <svg
-            className="w-6 h-6 text-black"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-        </button>
-      )}
-
-      {/* Модальное окно редактирования */}
+      {/* Модальное окно создания/редактирования пользователя */}
       <UserEditModal
-        user={selectedUser}
         isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedUser(null);
+        }}
         onSave={handleSaveUser}
+        user={selectedUser}
       />
 
-      {/* Модальное окно подтверждения удаления */}
+      {/* Модальное окно подтверждения удаления пользователя */}
       <DeleteConfirmModal
         isOpen={isDeleteModalOpen}
         onClose={handleCloseDeleteModal}
         onConfirm={handleConfirmDelete}
         title="Удалить пользователя?"
-        message={`Вы точно хотите удалить пользователя "${userToDelete ? getUserDisplayName(userToDelete) : ''}"? Это действие нельзя отменить.`}
+        message={`Вы уверены, что хотите удалить пользователя "${userToDelete?.full_name || userToDelete?.username || ""}"? Это действие нельзя отменить.`}
         loading={deleting}
       />
 
-      {/* Модальное окно редактирования роли/отдела */}
+      {/* Модальное окно создания/редактирования роли */}
       <RoleEditModal
-        role={editingRole}
         isOpen={isRoleModalOpen}
         onClose={() => {
           setIsRoleModalOpen(false);
           setEditingRole(null);
+          setRoleType("role");
         }}
-        onSave={loadRolesAndDepartments}
+        onSave={handleSaveRole}
+        role={editingRole}
         type={roleType}
       />
 
-      {/* Модальное окно подтверждения удаления роли/отдела */}
+      {/* Модальное окно подтверждения удаления роли */}
       <DeleteConfirmModal
         isOpen={isRoleDeleteModalOpen}
-        onClose={handleCloseRoleDeleteModal}
+        onClose={handleCloseDeleteRoleModal}
         onConfirm={handleConfirmDeleteRole}
-        title={`Удалить ${roleToDelete?.type === "role" ? "роль" : "отдел"}?`}
-        message={`Вы точно хотите удалить ${roleToDelete?.type === "role" ? "роль" : "отдел"} "${roleToDelete?.name || ''}"? Это действие нельзя отменить.`}
+        title="Удалить роль/отдел?"
+        message={`Вы уверены, что хотите удалить "${roleToDelete?.name || ""}"? Это действие нельзя отменить.`}
         loading={deletingRole}
       />
     </div>
   );
 }
-

@@ -3,6 +3,7 @@ const API_BASE_URL = 'https://miran-hackathon.onrender.com';
 const USE_API_PROXY = true; // Использовать прокси через Next.js API routes
 const USE_MOCK_DATA = false; // Принудительное использование моковых данных (если true, API не вызывается)
 const USE_API_FIRST = true; // Сначала пытаться использовать API, при ошибке - моковые данные
+const USE_LOCAL_STORAGE = true; // Использовать localStorage для хранения данных
 
 import { 
   mockUsers, 
@@ -186,9 +187,9 @@ function adaptUserToAPI(user: Partial<User>): Partial<UserResponse> {
     baseData.last_name = user.last_name || '';
   }
   
-  // Добавляем telegram_id, если он есть
-  if (user.telegram_id) {
-    baseData.telegram_id = user.telegram_id;
+  // Добавляем telegram_id, если он есть и не пустой
+  if (user.telegram_id && user.telegram_id.trim()) {
+    baseData.telegram_id = user.telegram_id.trim();
   }
   
   return baseData;
@@ -201,10 +202,35 @@ function getMockUsers(): User[] {
 
 // Users API
 export async function getUsers(): Promise<User[]> {
+  // Если используем localStorage, загружаем оттуда
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { getUsersFromStorage, initializeStorageFromMocks } = await import('../app/utils/localStorage');
+      initializeStorageFromMocks();
+      const users = getUsersFromStorage();
+      if (users.length > 0) {
+        console.log('[API] Loaded users from localStorage:', users.length);
+        return users;
+      }
+    } catch (error) {
+      console.error('[API] Error loading from localStorage:', error);
+    }
+  }
+
   if (USE_MOCK_DATA) {
     // Имитация задержки сети
     await new Promise(resolve => setTimeout(resolve, 500));
-    return getMockUsers();
+    const users = getMockUsers();
+    // Сохраняем в localStorage
+    if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+      try {
+        const { saveUsersToStorage } = await import('../app/utils/localStorage');
+        saveUsersToStorage(users);
+      } catch (error) {
+        console.error('[API] Error saving to localStorage:', error);
+      }
+    }
+    return users;
   }
 
   // Используем прокси через Next.js API route для обхода CORS
@@ -241,6 +267,16 @@ export async function getUsers(): Promise<User[]> {
     const adaptedUsers = Array.isArray(data) ? data.map(adaptUserFromAPI) : [];
     console.log('[API] Adapted users:', adaptedUsers);
     
+    // Сохраняем в localStorage
+    if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+      try {
+        const { saveUsersToStorage } = await import('../app/utils/localStorage');
+        saveUsersToStorage(adaptedUsers);
+      } catch (error) {
+        console.error('[API] Error saving to localStorage:', error);
+      }
+    }
+    
     return adaptedUsers;
   } catch (error) {
     console.error('[API] Fetch error:', error);
@@ -261,6 +297,17 @@ export async function getUsers(): Promise<User[]> {
       
       const data: UserResponse[] = await directResponse.json();
       const adaptedUsers = Array.isArray(data) ? data.map(adaptUserFromAPI) : [];
+      
+      // Сохраняем в localStorage
+      if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+        try {
+          const { saveUsersToStorage } = await import('../app/utils/localStorage');
+          saveUsersToStorage(adaptedUsers);
+        } catch (error) {
+          console.error('[API] Error saving to localStorage:', error);
+        }
+      }
+      
       return adaptedUsers;
     }
     throw error;
@@ -482,7 +529,19 @@ export async function createUser(userData: Partial<User>): Promise<User> {
 
     const data: UserResponse = await response.json();
     console.log('[API] createUser response:', data);
-    return adaptUserFromAPI(data);
+    const newUser = adaptUserFromAPI(data);
+    
+    // Сохраняем в localStorage
+    if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+      try {
+        const { addUserToStorage } = await import('../app/utils/localStorage');
+        addUserToStorage(newUser);
+      } catch (error) {
+        console.error('[API] Error saving to localStorage:', error);
+      }
+    }
+    
+    return newUser;
   } catch (error) {
     console.error('[API] Create user error:', error);
     throw error;
@@ -552,7 +611,19 @@ export async function updateUser(id: number, userData: Partial<User>): Promise<U
 
     const data: UserResponse = await response.json();
     console.log('[API] updateUser response:', data);
-    return adaptUserFromAPI(data);
+    const updatedUser = adaptUserFromAPI(data);
+    
+    // Сохраняем в localStorage
+    if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+      try {
+        const { addUserToStorage } = await import('../app/utils/localStorage');
+        addUserToStorage(updatedUser);
+      } catch (error) {
+        console.error('[API] Error saving to localStorage:', error);
+      }
+    }
+    
+    return updatedUser;
   } catch (error) {
     console.error('[API] Update user error:', error);
     throw error;
@@ -719,6 +790,17 @@ export async function deleteUser(id: number): Promise<void> {
     }
     
     console.log('[API] User deleted successfully');
+    
+    // Удаляем из localStorage
+    if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+      try {
+        const { removeUserFromStorage } = await import('../app/utils/localStorage');
+        removeUserFromStorage(id);
+      } catch (error) {
+        console.error('[API] Error removing from localStorage:', error);
+      }
+    }
+    
     return; // Успешно удалено через API
   } catch (error) {
     console.error('[API] Delete user error:', error);
@@ -792,9 +874,34 @@ function adaptChecklistToAPI(checklist: Partial<Checklist>): Partial<ChecklistRe
 
 // Checklists API
 export async function getChecklists(): Promise<Checklist[]> {
+  // Если используем localStorage, загружаем оттуда
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { getChecklistsFromStorage, initializeStorageFromMocks } = await import('../app/utils/localStorage');
+      initializeStorageFromMocks();
+      const checklists = getChecklistsFromStorage();
+      if (checklists.length > 0) {
+        console.log('[API] Loaded checklists from localStorage:', checklists.length);
+        return checklists;
+      }
+    } catch (error) {
+      console.error('[API] Error loading checklists from localStorage:', error);
+    }
+  }
+
   if (USE_MOCK_DATA) {
     await new Promise(resolve => setTimeout(resolve, 500));
-    return [...mockChecklists];
+    const checklists = [...mockChecklists];
+    // Сохраняем в localStorage
+    if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+      try {
+        const { saveChecklistsToStorage } = await import('../app/utils/localStorage');
+        saveChecklistsToStorage(checklists);
+      } catch (error) {
+        console.error('[API] Error saving checklists to localStorage:', error);
+      }
+    }
+    return checklists;
   }
 
   if (USE_API_FIRST) {
@@ -811,16 +918,52 @@ export async function getChecklists(): Promise<Checklist[]> {
     }
 
       const data: ChecklistResponse[] = await response.json();
-      return Array.isArray(data) ? data.map(adaptChecklistFromAPI) : [];
+      const checklists = Array.isArray(data) ? data.map(adaptChecklistFromAPI) : [];
+      
+      // Сохраняем в localStorage
+      if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+        try {
+          const { saveChecklistsToStorage } = await import('../app/utils/localStorage');
+          saveChecklistsToStorage(checklists);
+        } catch (error) {
+          console.error('[API] Error saving checklists to localStorage:', error);
+        }
+      }
+      
+      return checklists;
   } catch (error) {
       console.warn('API request failed, using mock data:', error);
       await new Promise(resolve => setTimeout(resolve, 300));
-      return [...mockChecklists];
+      const checklists = [...mockChecklists];
+      
+      // Сохраняем в localStorage
+      if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+        try {
+          const { saveChecklistsToStorage } = await import('../app/utils/localStorage');
+          saveChecklistsToStorage(checklists);
+        } catch (error) {
+          console.error('[API] Error saving checklists to localStorage:', error);
+        }
+      }
+      
+      return checklists;
   }
   }
 
   await new Promise(resolve => setTimeout(resolve, 500));
-  return [...mockChecklists];
+  const checklists = [...mockChecklists];
+  
+  // Сохраняем в localStorage
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { saveChecklistsToStorage } = await import('../app/utils/localStorage');
+      saveChecklistsToStorage(checklists);
+    } catch (error) {
+      console.error('[API] Error saving checklists to localStorage:', error);
+    }
+  }
+  
+  return checklists;
 }
 
 export async function getChecklistById(id: number): Promise<Checklist> {
@@ -868,6 +1011,30 @@ export async function getChecklistById(id: number): Promise<Checklist> {
 }
 
 export async function createChecklist(checklistData: Partial<Checklist>): Promise<Checklist> {
+  // Если используем localStorage, создаем там
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { getChecklistsFromStorage, addChecklistToStorage, initializeStorageFromMocks } = await import('../app/utils/localStorage');
+      initializeStorageFromMocks();
+      const checklists = getChecklistsFromStorage();
+      const newId = checklists.length > 0 ? Math.max(...checklists.map(c => c.id), 0) + 1 : 1;
+      const newChecklist: Checklist = {
+        id: newId,
+        title: checklistData.title || "",
+        description: checklistData.description || "",
+        items: checklistData.items || [],
+        status: checklistData.status || "Не начато",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      addChecklistToStorage(newChecklist);
+      console.log('[API] Created checklist in localStorage:', newChecklist.id);
+      return { ...newChecklist };
+    } catch (error) {
+      console.error('[API] Error creating checklist in localStorage:', error);
+    }
+  }
+
   if (USE_MOCK_DATA) {
     await new Promise(resolve => setTimeout(resolve, 300));
     const newId = Math.max(...mockChecklists.map(c => c.id), 0) + 1;
@@ -881,6 +1048,17 @@ export async function createChecklist(checklistData: Partial<Checklist>): Promis
       updated_at: new Date().toISOString(),
     };
     mockChecklists.push(newChecklist);
+    
+    // Сохраняем в localStorage
+    if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+      try {
+        const { addChecklistToStorage } = await import('../app/utils/localStorage');
+        addChecklistToStorage(newChecklist);
+      } catch (error) {
+        console.error('[API] Error saving checklist to localStorage:', error);
+      }
+    }
+    
     return { ...newChecklist };
   }
 
@@ -900,7 +1078,19 @@ export async function createChecklist(checklistData: Partial<Checklist>): Promis
     }
 
       const data: ChecklistResponse = await response.json();
-      return adaptChecklistFromAPI(data);
+      const newChecklist = adaptChecklistFromAPI(data);
+      
+      // Сохраняем в localStorage
+      if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+        try {
+          const { addChecklistToStorage } = await import('../app/utils/localStorage');
+          addChecklistToStorage(newChecklist);
+        } catch (error) {
+          console.error('[API] Error saving checklist to localStorage:', error);
+        }
+      }
+      
+      return newChecklist;
   } catch (error) {
       console.warn('API request failed, using mock data:', error);
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -915,6 +1105,17 @@ export async function createChecklist(checklistData: Partial<Checklist>): Promis
         updated_at: new Date().toISOString(),
       };
       mockChecklists.push(newChecklist);
+      
+      // Сохраняем в localStorage
+      if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+        try {
+          const { addChecklistToStorage } = await import('../app/utils/localStorage');
+          addChecklistToStorage(newChecklist);
+        } catch (error) {
+          console.error('[API] Error saving checklist to localStorage:', error);
+        }
+      }
+      
       return { ...newChecklist };
     }
   }
@@ -931,6 +1132,17 @@ export async function createChecklist(checklistData: Partial<Checklist>): Promis
     updated_at: new Date().toISOString(),
   };
   mockChecklists.push(newChecklist);
+  
+  // Сохраняем в localStorage
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { addChecklistToStorage } = await import('../app/utils/localStorage');
+      addChecklistToStorage(newChecklist);
+    } catch (error) {
+      console.error('[API] Error saving checklist to localStorage:', error);
+    }
+  }
+  
   return { ...newChecklist };
 }
 
@@ -945,18 +1157,53 @@ export function fileToBase64(file: File): Promise<string> {
 }
 
 export async function updateChecklist(id: number, checklistData: Partial<Checklist>): Promise<Checklist> {
+  // Если используем localStorage, обновляем там
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { getChecklistsFromStorage, addChecklistToStorage, initializeStorageFromMocks } = await import('../app/utils/localStorage');
+      initializeStorageFromMocks();
+      const checklists = getChecklistsFromStorage();
+      const checklistIndex = checklists.findIndex(c => c.id === id);
+      if (checklistIndex === -1) {
+        throw new Error(`Checklist with id ${id} not found`);
+      }
+      const updatedChecklist = {
+        ...checklists[checklistIndex],
+        ...checklistData,
+        updated_at: new Date().toISOString(),
+      };
+      addChecklistToStorage(updatedChecklist);
+      console.log('[API] Updated checklist in localStorage:', id);
+      return { ...updatedChecklist };
+    } catch (error) {
+      console.error('[API] Error updating checklist in localStorage:', error);
+    }
+  }
+
   if (USE_MOCK_DATA) {
     await new Promise(resolve => setTimeout(resolve, 300));
     const checklistIndex = mockChecklists.findIndex(c => c.id === id);
     if (checklistIndex === -1) {
       throw new Error(`Checklist with id ${id} not found`);
     }
-    mockChecklists[checklistIndex] = {
+    const updatedChecklist = {
       ...mockChecklists[checklistIndex],
       ...checklistData,
       updated_at: new Date().toISOString(),
     };
-    return { ...mockChecklists[checklistIndex] };
+    mockChecklists[checklistIndex] = updatedChecklist;
+    
+    // Сохраняем в localStorage
+    if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+      try {
+        const { addChecklistToStorage } = await import('../app/utils/localStorage');
+        addChecklistToStorage(updatedChecklist);
+      } catch (error) {
+        console.error('[API] Error saving checklist to localStorage:', error);
+      }
+    }
+    
+    return { ...updatedChecklist };
   }
 
   if (USE_API_FIRST) {
@@ -1006,6 +1253,18 @@ export async function updateChecklist(id: number, checklistData: Partial<Checkli
 }
 
 export async function deleteChecklist(id: number): Promise<void> {
+  // Если используем localStorage, удаляем оттуда
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { removeChecklistFromStorage } = await import('../app/utils/localStorage');
+      removeChecklistFromStorage(id);
+      console.log('[API] Deleted checklist from localStorage:', id);
+      return;
+    } catch (error) {
+      console.error('[API] Error deleting checklist from localStorage:', error);
+    }
+  }
+
   if (USE_MOCK_DATA) {
     await new Promise(resolve => setTimeout(resolve, 300));
     const checklistIndex = mockChecklists.findIndex(c => c.id === id);
@@ -1013,6 +1272,17 @@ export async function deleteChecklist(id: number): Promise<void> {
       throw new Error(`Checklist with id ${id} not found`);
     }
     mockChecklists.splice(checklistIndex, 1);
+    
+    // Удаляем из localStorage
+    if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+      try {
+        const { removeChecklistFromStorage } = await import('../app/utils/localStorage');
+        removeChecklistFromStorage(id);
+      } catch (error) {
+        console.error('[API] Error removing checklist from localStorage:', error);
+      }
+    }
+    
     return;
   }
 
@@ -1256,12 +1526,41 @@ export async function sendMessage(chatId: number, senderId: number, text: string
 
 // Reports API
 export async function getReports(inspectorId?: number): Promise<Report[]> {
+  // Если используем localStorage, загружаем оттуда
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { getReportsFromStorage, initializeStorageFromMocks } = await import('../app/utils/localStorage');
+      initializeStorageFromMocks();
+      let reports = getReportsFromStorage();
+      if (inspectorId) {
+        reports = reports.filter(report => report.inspector_id === inspectorId);
+      }
+      if (reports.length > 0) {
+        console.log('[API] Loaded reports from localStorage:', reports.length);
+        return reports;
+      }
+    } catch (error) {
+      console.error('[API] Error loading reports from localStorage:', error);
+    }
+  }
+
   if (USE_MOCK_DATA) {
     await new Promise(resolve => setTimeout(resolve, 400));
     let reports = [...mockReports];
     if (inspectorId) {
       reports = reports.filter(report => report.inspector_id === inspectorId);
     }
+    
+    // Сохраняем в localStorage
+    if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+      try {
+        const { saveReportsToStorage } = await import('../app/utils/localStorage');
+        saveReportsToStorage(reports);
+      } catch (error) {
+        console.error('[API] Error saving reports to localStorage:', error);
+      }
+    }
+    
     return reports;
   }
 
@@ -1283,7 +1582,19 @@ export async function getReports(inspectorId?: number): Promise<Report[]> {
       }
 
       const data = await response.json();
-      return Array.isArray(data) ? data : [];
+      const reports = Array.isArray(data) ? data : [];
+      
+      // Сохраняем в localStorage
+      if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+        try {
+          const { saveReportsToStorage } = await import('../app/utils/localStorage');
+          saveReportsToStorage(reports);
+        } catch (error) {
+          console.error('[API] Error saving reports to localStorage:', error);
+        }
+      }
+      
+      return reports;
     } catch (error) {
       console.warn('API request failed, using mock data:', error);
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -1291,6 +1602,17 @@ export async function getReports(inspectorId?: number): Promise<Report[]> {
       if (inspectorId) {
         reports = reports.filter(report => report.inspector_id === inspectorId);
       }
+      
+      // Сохраняем в localStorage
+      if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+        try {
+          const { saveReportsToStorage } = await import('../app/utils/localStorage');
+          saveReportsToStorage(reports);
+        } catch (error) {
+          console.error('[API] Error saving reports to localStorage:', error);
+        }
+      }
+      
       return reports;
     }
   }
@@ -1300,6 +1622,17 @@ export async function getReports(inspectorId?: number): Promise<Report[]> {
   if (inspectorId) {
     reports = reports.filter(report => report.inspector_id === inspectorId);
   }
+  
+  // Сохраняем в localStorage
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { saveReportsToStorage } = await import('../app/utils/localStorage');
+      saveReportsToStorage(reports);
+    } catch (error) {
+      console.error('[API] Error saving reports to localStorage:', error);
+    }
+  }
+  
   return reports;
 }
 
@@ -1347,6 +1680,32 @@ export async function getReportById(id: number): Promise<Report> {
 }
 
 export async function createReport(reportData: Partial<Report>): Promise<Report> {
+  // Если используем localStorage, создаем там
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { getReportsFromStorage, addReportToStorage, initializeStorageFromMocks } = await import('../app/utils/localStorage');
+      initializeStorageFromMocks();
+      const reports = getReportsFromStorage();
+      const newId = reports.length > 0 ? Math.max(...reports.map(r => r.id), 0) + 1 : 1;
+      const newReport: Report = {
+        id: newId,
+        date: reportData.date || new Date().toISOString().split('T')[0],
+        inspector_id: reportData.inspector_id || 0,
+        checklist_id: reportData.checklist_id || 0,
+        department_index: reportData.department_index || 0,
+        items: reportData.items || [],
+        status: reportData.status || "Не начато",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      addReportToStorage(newReport);
+      console.log('[API] Created report in localStorage:', newReport.id);
+      return { ...newReport };
+    } catch (error) {
+      console.error('[API] Error creating report in localStorage:', error);
+    }
+  }
+
   if (USE_MOCK_DATA) {
     await new Promise(resolve => setTimeout(resolve, 300));
     const newId = Math.max(...mockReports.map(r => r.id), 0) + 1;
@@ -1362,6 +1721,17 @@ export async function createReport(reportData: Partial<Report>): Promise<Report>
       updated_at: new Date().toISOString(),
     };
     mockReports.push(newReport);
+    
+    // Сохраняем в localStorage
+    if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+      try {
+        const { addReportToStorage } = await import('../app/utils/localStorage');
+        addReportToStorage(newReport);
+      } catch (error) {
+        console.error('[API] Error saving report to localStorage:', error);
+      }
+    }
+    
     return { ...newReport };
   }
 
@@ -1379,7 +1749,19 @@ export async function createReport(reportData: Partial<Report>): Promise<Report>
         throw new Error(`Failed to create report: ${response.statusText}`);
       }
 
-      return await response.json();
+      const newReport = await response.json();
+      
+      // Сохраняем в localStorage
+      if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+        try {
+          const { addReportToStorage } = await import('../app/utils/localStorage');
+          addReportToStorage(newReport);
+        } catch (error) {
+          console.error('[API] Error saving report to localStorage:', error);
+        }
+      }
+      
+      return newReport;
     } catch (error) {
       console.warn('API request failed, using mock data:', error);
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -1396,6 +1778,17 @@ export async function createReport(reportData: Partial<Report>): Promise<Report>
         updated_at: new Date().toISOString(),
       };
       mockReports.push(newReport);
+      
+      // Сохраняем в localStorage
+      if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+        try {
+          const { addReportToStorage } = await import('../app/utils/localStorage');
+          addReportToStorage(newReport);
+        } catch (error) {
+          console.error('[API] Error saving report to localStorage:', error);
+        }
+      }
+      
       return { ...newReport };
     }
   }
@@ -1414,22 +1807,68 @@ export async function createReport(reportData: Partial<Report>): Promise<Report>
     updated_at: new Date().toISOString(),
   };
   mockReports.push(newReport);
+  
+  // Сохраняем в localStorage
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { addReportToStorage } = await import('../app/utils/localStorage');
+      addReportToStorage(newReport);
+    } catch (error) {
+      console.error('[API] Error saving report to localStorage:', error);
+    }
+  }
+  
   return { ...newReport };
 }
 
 export async function updateReport(id: number, reportData: Partial<Report>): Promise<Report> {
+  // Если используем localStorage, обновляем там
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { getReportsFromStorage, addReportToStorage, initializeStorageFromMocks } = await import('../app/utils/localStorage');
+      initializeStorageFromMocks();
+      const reports = getReportsFromStorage();
+      const reportIndex = reports.findIndex(r => r.id === id);
+      if (reportIndex === -1) {
+        throw new Error(`Report with id ${id} not found`);
+      }
+      const updatedReport = {
+        ...reports[reportIndex],
+        ...reportData,
+        updated_at: new Date().toISOString(),
+      };
+      addReportToStorage(updatedReport);
+      console.log('[API] Updated report in localStorage:', id);
+      return { ...updatedReport };
+    } catch (error) {
+      console.error('[API] Error updating report in localStorage:', error);
+    }
+  }
+
   if (USE_MOCK_DATA) {
     await new Promise(resolve => setTimeout(resolve, 300));
     const reportIndex = mockReports.findIndex(r => r.id === id);
     if (reportIndex === -1) {
       throw new Error(`Report with id ${id} not found`);
     }
-    mockReports[reportIndex] = {
+    const updatedReport = {
       ...mockReports[reportIndex],
       ...reportData,
       updated_at: new Date().toISOString(),
     };
-    return { ...mockReports[reportIndex] };
+    mockReports[reportIndex] = updatedReport;
+    
+    // Сохраняем в localStorage
+    if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+      try {
+        const { addReportToStorage } = await import('../app/utils/localStorage');
+        addReportToStorage(updatedReport);
+      } catch (error) {
+        console.error('[API] Error saving report to localStorage:', error);
+      }
+    }
+    
+    return { ...updatedReport };
   }
 
   if (USE_API_FIRST) {
@@ -1446,7 +1885,19 @@ export async function updateReport(id: number, reportData: Partial<Report>): Pro
         throw new Error(`Failed to update report: ${response.statusText}`);
       }
 
-      return await response.json();
+      const updatedReport = await response.json();
+      
+      // Сохраняем в localStorage
+      if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+        try {
+          const { addReportToStorage } = await import('../app/utils/localStorage');
+          addReportToStorage(updatedReport);
+        } catch (error) {
+          console.error('[API] Error saving report to localStorage:', error);
+        }
+      }
+      
+      return updatedReport;
     } catch (error) {
       console.warn('API request failed, using mock data:', error);
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -1454,12 +1905,24 @@ export async function updateReport(id: number, reportData: Partial<Report>): Pro
       if (reportIndex === -1) {
         throw new Error(`Report with id ${id} not found`);
       }
-      mockReports[reportIndex] = {
+      const updatedReport = {
         ...mockReports[reportIndex],
         ...reportData,
         updated_at: new Date().toISOString(),
       };
-      return { ...mockReports[reportIndex] };
+      mockReports[reportIndex] = updatedReport;
+      
+      // Сохраняем в localStorage
+      if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+        try {
+          const { addReportToStorage } = await import('../app/utils/localStorage');
+          addReportToStorage(updatedReport);
+        } catch (error) {
+          console.error('[API] Error saving report to localStorage:', error);
+        }
+      }
+      
+      return { ...updatedReport };
     }
   }
 
@@ -1468,12 +1931,24 @@ export async function updateReport(id: number, reportData: Partial<Report>): Pro
   if (reportIndex === -1) {
     throw new Error(`Report with id ${id} not found`);
   }
-  mockReports[reportIndex] = {
+  const updatedReport = {
     ...mockReports[reportIndex],
     ...reportData,
     updated_at: new Date().toISOString(),
   };
-  return { ...mockReports[reportIndex] };
+  mockReports[reportIndex] = updatedReport;
+  
+  // Сохраняем в localStorage
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { addReportToStorage } = await import('../app/utils/localStorage');
+      addReportToStorage(updatedReport);
+    } catch (error) {
+      console.error('[API] Error saving report to localStorage:', error);
+    }
+  }
+  
+  return { ...updatedReport };
 }
 
 // Adapter functions for Roles
@@ -1494,12 +1969,41 @@ function adaptRoleToAPI(role: Partial<Role>): Partial<RoleResponse> {
 
 // Roles API
 export async function getRoles(type?: "role" | "department"): Promise<Role[]> {
+  // Если используем localStorage, загружаем оттуда
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { getRolesFromStorage, initializeStorageFromMocks } = await import('../app/utils/localStorage');
+      initializeStorageFromMocks();
+      let roles = getRolesFromStorage();
+      if (type) {
+        roles = roles.filter(r => r.type === type);
+      }
+      if (roles.length > 0) {
+        console.log('[API] Loaded roles from localStorage:', roles.length);
+        return roles;
+      }
+    } catch (error) {
+      console.error('[API] Error loading roles from localStorage:', error);
+    }
+  }
+
   if (USE_MOCK_DATA) {
     await new Promise(resolve => setTimeout(resolve, 300));
     let roles = [...mockRoles];
     if (type) {
       roles = roles.filter(r => r.type === type);
     }
+    
+    // Сохраняем в localStorage
+    if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+      try {
+        const { saveRolesToStorage } = await import('../app/utils/localStorage');
+        saveRolesToStorage(roles);
+      } catch (error) {
+        console.error('[API] Error saving roles to localStorage:', error);
+      }
+    }
+    
     return roles;
   }
 
@@ -1522,7 +2026,7 @@ export async function getRoles(type?: "role" | "department"): Promise<Role[]> {
       }
 
       const data: (RoleResponse | DepartmentResponse)[] = await response.json();
-      return data.map(item => {
+      const roles = data.map(item => {
         if ('id' in item) {
           // DepartmentResponse
           return {
@@ -1536,6 +2040,18 @@ export async function getRoles(type?: "role" | "department"): Promise<Role[]> {
           return adaptRoleFromAPI(item, type || 'role');
         }
       });
+      
+      // Сохраняем в localStorage
+      if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+        try {
+          const { saveRolesToStorage } = await import('../app/utils/localStorage');
+          saveRolesToStorage(roles);
+        } catch (error) {
+          console.error('[API] Error saving roles to localStorage:', error);
+        }
+      }
+      
+      return roles;
     } catch (error) {
       console.warn('API request failed, using mock data:', error);
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -1543,6 +2059,17 @@ export async function getRoles(type?: "role" | "department"): Promise<Role[]> {
       if (type) {
         roles = roles.filter(r => r.type === type);
       }
+      
+      // Сохраняем в localStorage
+      if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+        try {
+          const { saveRolesToStorage } = await import('../app/utils/localStorage');
+          saveRolesToStorage(roles);
+        } catch (error) {
+          console.error('[API] Error saving roles to localStorage:', error);
+        }
+      }
+      
       return roles;
     }
   }
@@ -1552,6 +2079,17 @@ export async function getRoles(type?: "role" | "department"): Promise<Role[]> {
   if (type) {
     roles = roles.filter(r => r.type === type);
   }
+  
+  // Сохраняем в localStorage
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { saveRolesToStorage } = await import('../app/utils/localStorage');
+      saveRolesToStorage(roles);
+    } catch (error) {
+      console.error('[API] Error saving roles to localStorage:', error);
+    }
+  }
+  
   return roles;
 }
 

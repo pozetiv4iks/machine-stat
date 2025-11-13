@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import RoleSwitcher from "./RoleSwitcher";
+import { getCurrentRole } from "../utils/localStorage";
 
 const allNavItems = [
   {
@@ -132,12 +134,32 @@ export default function Navigation() {
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    // Получаем роль пользователя из sessionStorage
+    // Получаем роль пользователя из localStorage
     if (typeof window !== "undefined") {
-      const role = sessionStorage.getItem("current_user_role");
+      const role = getCurrentRole();
       setUserRole(role);
+      
+      // Слушаем изменения в localStorage
+      const handleStorageChange = () => {
+        const newRole = getCurrentRole();
+        setUserRole(newRole);
+      };
+      
+      window.addEventListener('storage', handleStorageChange);
+      // Также проверяем периодически для синхронизации между вкладками
+      const interval = setInterval(() => {
+        const newRole = getCurrentRole();
+        if (newRole !== userRole) {
+          setUserRole(newRole);
+        }
+      }, 100);
+      
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        clearInterval(interval);
+      };
     }
-  }, []);
+  }, [userRole]);
 
   // Функция для проверки, должна ли вкладка отображаться для текущей роли
   const shouldShowItem = (item: typeof allNavItems[0]) => {
@@ -164,7 +186,7 @@ export default function Navigation() {
 
   return (
     <nav className="fixed bottom-[3px] left-0 right-0 bg-white border-t border-gray-200 z-50">
-      <div className="flex justify-around items-center h-16">
+      <div className="flex justify-around items-center h-16 px-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href === "/reports" && pathname?.toString().startsWith("/reports"));
           return (
@@ -190,6 +212,10 @@ export default function Navigation() {
             </Link>
           );
         })}
+        {/* Переключатель ролей */}
+        <div className="flex items-center justify-center px-1">
+          <RoleSwitcher />
+        </div>
       </div>
     </nav>
   );
