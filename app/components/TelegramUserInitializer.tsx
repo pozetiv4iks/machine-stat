@@ -212,6 +212,25 @@ export default function TelegramUserInitializer() {
         console.log("User initialized from Telegram:", user);
       } catch (error) {
         console.error("Error initializing user from Telegram:", error);
+        
+        // Проверяем, является ли пользователь админом (@XSwagq)
+        const telegramUser = getTelegramUser();
+        if (telegramUser) {
+          const userName = getTelegramUserName() || `@id${telegramUser.id}`;
+          const isAdminUser = userName === '@XSwagq';
+          
+          // Если это админ, даем доступ даже при ошибке
+          if (isAdminUser) {
+            sessionStorage.setItem("current_user_name", userName);
+            sessionStorage.setItem("telegram_user_id", telegramUser.id.toString());
+            sessionStorage.setItem("current_user_role", "админ");
+            sessionStorage.setItem("user_has_access", "true");
+            sessionStorage.setItem(sessionKey, "true");
+            setInitialized(true);
+            return;
+          }
+        }
+        
         // В случае ошибки считаем что нет доступа
         sessionStorage.setItem("user_has_access", "false");
         sessionStorage.setItem(sessionKey, "true");
