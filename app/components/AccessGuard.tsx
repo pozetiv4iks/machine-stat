@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { waitForUserInitialization } from "./TelegramUserInitializer";
 import AccessDenied from "./AccessDenied";
+import { isTelegramWebAppAvailable } from "../utils/telegram";
 
 interface AccessGuardProps {
   children: React.ReactNode;
@@ -21,8 +22,7 @@ export default function AccessGuard({ children }: AccessGuardProps) {
         // Проверяем, имеет ли пользователь доступ
         if (typeof window !== "undefined") {
           // Дополнительная проверка: убеждаемся, что данные Telegram все еще доступны
-          const tg = (window as any).Telegram?.WebApp;
-          const hasTelegramData = !!tg?.initDataUnsafe?.user;
+          const hasTelegramData = isTelegramWebAppAvailable();
           
           if (!hasTelegramData) {
             // Если данных Telegram нет, но в sessionStorage есть старые данные - очищаем их

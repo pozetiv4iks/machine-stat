@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { waitForUserInitialization } from './TelegramUserInitializer';
+import { getTelegramUser, getTelegramUserName } from '../utils/telegram';
 
 export default function LoadingScreen() {
   const [isVisible, setIsVisible] = useState(true);
@@ -19,29 +20,21 @@ export default function LoadingScreen() {
 
       try {
         // Приоритет: сначала пробуем получить из Telegram Web App (самый актуальный источник)
-        const tg = (window as any).Telegram?.WebApp;
+        const telegramUser = getTelegramUser();
         
-        // Проверяем наличие Telegram Web App
-        if (tg) {
-          // Пробуем разные способы доступа к данным
-          const userData = tg.initDataUnsafe?.user || tg.initData?.user;
+        if (telegramUser) {
+          const tgUserName = getTelegramUserName();
           
-          if (userData) {
-            const tgUserName = userData.username 
-              ? `@${userData.username}` 
-              : `@id${userData.id}`;
-            
-            if (tgUserName) {
-              setUserName(tgUserName);
-            }
-            if (userData.id) {
-              setUserId(userData.id.toString());
-            }
-            
-            // Если получили данные из Telegram, выходим
-            if (tgUserName || userData.id) {
-              return;
-            }
+          if (tgUserName) {
+            setUserName(tgUserName);
+          }
+          if (telegramUser.id) {
+            setUserId(telegramUser.id.toString());
+          }
+          
+          // Если получили данные из Telegram, выходим
+          if (tgUserName || telegramUser.id) {
+            return;
           }
         }
 

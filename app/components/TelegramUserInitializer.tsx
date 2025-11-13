@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { checkUserAccess, updateUserByUsername, getUserByUsername } from "@/assets/api";
+import { getTelegramUser, getTelegramUserName, isTelegramWebAppAvailable } from "../utils/telegram";
 
 // Глобальная переменная для отслеживания инициализации
 let initializationPromise: Promise<boolean> | null = null;
@@ -38,8 +39,8 @@ export default function TelegramUserInitializer() {
       }
 
       // 1. Сначала проверяем актуальность данных Telegram Web App
-      const tg = (window as any).Telegram?.WebApp;
-      const hasTelegramData = !!tg?.initDataUnsafe?.user;
+      const telegramUser = getTelegramUser();
+      const hasTelegramData = !!telegramUser;
       
       // Если нет данных Telegram, проверяем есть ли сохраненные данные
       if (!hasTelegramData) {
@@ -71,10 +72,12 @@ export default function TelegramUserInitializer() {
       // Если уже инициализировано, проверяем что данные Telegram все еще актуальны
       if (alreadyInitialized === "true") {
         // Проверяем, что текущий пользователь в Telegram совпадает с сохраненным
-        const telegramUser = tg.initDataUnsafe.user;
-        const currentUserName = telegramUser.username 
-          ? `@${telegramUser.username}` 
-          : `@id${telegramUser.id}`;
+        const currentTelegramUser = getTelegramUser();
+        if (!currentTelegramUser) {
+          setInitialized(true);
+          return;
+        }
+        const currentUserName = getTelegramUserName();
         const savedUserName = sessionStorage.getItem("current_user_name");
         
         // Если пользователь изменился или данные не совпадают, переинициализируем
@@ -95,10 +98,14 @@ export default function TelegramUserInitializer() {
 
       try {
         // 3. Формируем userName для проверки доступа
-        const telegramUser = tg.initDataUnsafe.user;
-        const userName = telegramUser.username 
-          ? `@${telegramUser.username}` 
-          : `@id${telegramUser.id}`;
+        const currentTelegramUser = getTelegramUser();
+        if (!currentTelegramUser) {
+          sessionStorage.setItem("user_has_access", "false");
+          sessionStorage.setItem(sessionKey, "true");
+          setInitialized(true);
+          return;
+        }
+        const userName = getTelegramUserName() || `@id${currentTelegramUser.id}`;
 
         // 4. СНАЧАЛА проверяем доступ через check-access API
         const accessResponse = await checkUserAccess(userName);
@@ -107,8 +114,8 @@ export default function TelegramUserInitializer() {
           console.warn("User does not have access:", accessResponse.message);
           // Сохраняем данные пользователя из Telegram для отображения на экране ошибки
           sessionStorage.setItem("current_user_name", userName);
-          if (telegramUser.id) {
-            sessionStorage.setItem("current_user_id", telegramUser.id.toString());
+          if (currentTelegramUser.id) {
+            sessionStorage.setItem("current_user_id", currentTelegramUser.id.toString());
           }
           // Сохраняем информацию о том, что пользователь не имеет доступа
           sessionStorage.setItem("user_has_access", "false");
@@ -128,9 +135,9 @@ export default function TelegramUserInitializer() {
         const telegramUserData = {
           user_name: userName,
           username: userName,
-          first_name: telegramUser.first_name || user.first_name || '',
-          last_name: telegramUser.last_name || user.last_name || '',
-          full_name: [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(' ') || user.full_name || '',
+          first_name: currentTelegramUser.first_name || user.first_name || '',
+          last_name: currentTelegramUser.last_name || user.last_name || '',
+          full_name: [currentTelegramUser.first_name, currentTelegramUser.last_name].filter(Boolean).join(' ') || user.full_name || '',
           telegram_id: telegramId, // Отправляем Telegram ID в БД
           role: user.role || accessResponse.user.role, // Сохраняем существующую роль
         };
