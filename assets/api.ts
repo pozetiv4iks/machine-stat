@@ -9,7 +9,8 @@ import {
   mockChartDataYear,
   mockChats,
   mockMessages,
-  mockReports
+  mockReports,
+  mockRoles
 } from './mockData';
 
 export interface User {
@@ -84,6 +85,14 @@ export interface Report {
   score?: number; // Баллы (количество выполненных пунктов)
   created_at: string;
   updated_at: string;
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  type: "role" | "department"; // "role" для ролей, "department" для отделов
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Users API
@@ -678,6 +687,139 @@ export async function updateReport(id: number, reportData: Partial<Report>): Pro
     return await response.json();
   } catch (error) {
     console.error('Error updating report:', error);
+    throw error;
+  }
+}
+
+// Roles API
+export async function getRoles(type?: "role" | "department"): Promise<Role[]> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    let roles = [...mockRoles];
+    if (type) {
+      roles = roles.filter(r => r.type === type);
+    }
+    return roles;
+  }
+
+  try {
+    const url = type 
+      ? `${API_BASE_URL}/roles?type=${type}`
+      : `${API_BASE_URL}/roles`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch roles: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Error fetching roles:', error);
+    throw error;
+  }
+}
+
+export async function createRole(roleData: Partial<Role>): Promise<Role> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const newId = Math.max(...mockRoles.map(r => r.id), 0) + 1;
+    const newRole: Role = {
+      id: newId,
+      name: roleData.name || "",
+      type: roleData.type || "role",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    mockRoles.push(newRole);
+    return { ...newRole };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/roles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(roleData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to create role: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating role:', error);
+    throw error;
+  }
+}
+
+export async function updateRole(id: number, roleData: Partial<Role>): Promise<Role> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const roleIndex = mockRoles.findIndex(r => r.id === id);
+    if (roleIndex === -1) {
+      throw new Error(`Role with id ${id} not found`);
+    }
+    mockRoles[roleIndex] = {
+      ...mockRoles[roleIndex],
+      ...roleData,
+      updated_at: new Date().toISOString(),
+    };
+    return { ...mockRoles[roleIndex] };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/roles/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(roleData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update role: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating role:', error);
+    throw error;
+  }
+}
+
+export async function deleteRole(id: number): Promise<void> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const roleIndex = mockRoles.findIndex(r => r.id === id);
+    if (roleIndex === -1) {
+      throw new Error(`Role with id ${id} not found`);
+    }
+    mockRoles.splice(roleIndex, 1);
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/roles/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete role: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error('Error deleting role:', error);
     throw error;
   }
 }

@@ -222,7 +222,7 @@ export default function ChatsPage() {
         </div>
 
         {/* Поле ввода */}
-        <div className="sticky bottom-0 z-20 bg-white border-t border-gray-200 px-4 py-3 relative">
+        <div className="sticky bottom-0 z-20 px-4 py-3 relative">
           <div className="flex gap-2 items-end">
             <input
               type="text"

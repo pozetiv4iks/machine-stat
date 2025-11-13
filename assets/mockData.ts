@@ -1,4 +1,4 @@
-import { User, Checklist, ChartData, Chat, Message, Report } from './api';
+import { User, Checklist, ChartData, Chat, Message, Report, Role } from './api';
 
 export const mockUsers: User[] = [
   {
@@ -178,3 +178,14 @@ export const mockChats: Chat[] = [
 
 export const mockReports: Report[] = [];
 
+export const mockRoles: Role[] = [
+  { id: 1, name: "менеджмент", type: "role", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+  { id: 2, name: "админ", type: "role", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+  { id: 3, name: "супер админ", type: "role", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+  { id: 4, name: "начальник отдела 1", type: "role", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+  { id: 5, name: "начальник отдела 2", type: "role", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+  { id: 6, name: "проверяющий", type: "role", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+  { id: 7, name: "Отдел 1", type: "department", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+  { id: 8, name: "Отдел 2", type: "department", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+  { id: 9, name: "Отдел 3", type: "department", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+];
