@@ -91,7 +91,7 @@ export default function DateDetailsModal({
     return `${day} ${month}`;
   };
 
-  const handleDepartmentChange = (index: number, field: "inspector" | "meeting" | "checklist_id", value: string | number) => {
+  const handleDepartmentChange = (index: number, field: "inspector" | "meeting" | "checklist_id" | "check", value: string | number) => {
     const updated = [...editedDepartments];
     updated[index] = { ...updated[index], [field]: value };
     setEditedDepartments(updated);
