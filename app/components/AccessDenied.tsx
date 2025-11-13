@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getTelegramUser, getTelegramUserName } from '../utils/telegram';
+import { getTelegramUser, getTelegramUserName, waitForTelegramUser } from '../utils/telegram';
 
 export default function AccessDenied() {
   const [userName, setUserName] = useState<string>('');
@@ -59,6 +59,17 @@ export default function AccessDenied() {
 
     // Получаем информацию сразу
     getUserInfo();
+
+    // Ожидаем готовности Telegram Web App и получаем данные пользователя
+    waitForTelegramUser(3000).then((user) => {
+      if (user) {
+        const tgUserName = user.username 
+          ? `@${user.username}` 
+          : `@id${user.id}`;
+        setUserName(tgUserName);
+        setUserId(user.id.toString());
+      }
+    });
 
     // Периодически проверяем обновление данных
     const checkInterval = setInterval(() => {

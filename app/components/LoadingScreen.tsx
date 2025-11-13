@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { waitForUserInitialization } from './TelegramUserInitializer';
-import { getTelegramUser, getTelegramUserName } from '../utils/telegram';
+import { getTelegramUser, getTelegramUserName, waitForTelegramUser } from '../utils/telegram';
 
 export default function LoadingScreen() {
   const [isVisible, setIsVisible] = useState(true);
@@ -60,6 +60,17 @@ export default function LoadingScreen() {
 
     // Получаем информацию о пользователе
     getUserInfo();
+
+    // Ожидаем готовности Telegram Web App и получаем данные пользователя
+    waitForTelegramUser(3000).then((user) => {
+      if (user) {
+        const tgUserName = user.username 
+          ? `@${user.username}` 
+          : `@id${user.id}`;
+        setUserName(tgUserName);
+        setUserId(user.id.toString());
+      }
+    });
 
     // Периодически проверяем обновление данных (на случай, если они появятся позже)
     const checkInterval = setInterval(() => {

@@ -13,6 +13,7 @@ export interface TelegramUser {
 
 /**
  * Получает данные пользователя из Telegram Web App
+ * Использует Telegram.WebApp.initDataUnsafe.user согласно документации Telegram Mini App
  */
 export function getTelegramUser(): TelegramUser | null {
   if (typeof window === 'undefined') {
@@ -42,57 +43,13 @@ export function getTelegramUser(): TelegramUser | null {
     console.log('[Telegram] WebApp found:', {
       version: tg.version,
       platform: tg.platform,
-      initData: typeof tg.initData === 'string' ? 'string' : !!tg.initData,
       initDataUnsafe: !!tg.initDataUnsafe,
-      initDataRaw: typeof tg.initData === 'string' ? tg.initData.substring(0, 100) : undefined,
+      hasUser: !!tg.initDataUnsafe?.user,
     });
 
-    // Пробуем разные способы доступа к данным пользователя
-    let userData = null;
-    
-    // Способ 1: initDataUnsafe.user
-    if (tg.initDataUnsafe?.user) {
-      userData = tg.initDataUnsafe.user;
-      console.log('[Telegram] Found user in initDataUnsafe:', userData);
-    }
-    
-    // Способ 2: initData.user (если initDataUnsafe не сработал)
-    if (!userData && tg.initData?.user) {
-      userData = tg.initData.user;
-      console.log('[Telegram] Found user in initData:', userData);
-    }
-    
-    // Способ 3: Прямой доступ к user
-    if (!userData && tg.user) {
-      userData = tg.user;
-      console.log('[Telegram] Found user directly:', userData);
-    }
-
-    // Способ 4: Парсим initData строку, если она есть
-    if (!userData && tg.initData && typeof tg.initData === 'string') {
-      try {
-        // initData может быть в формате query string
-        const params = new URLSearchParams(tg.initData);
-        const userParam = params.get('user');
-        if (userParam) {
-          userData = JSON.parse(decodeURIComponent(userParam));
-          console.log('[Telegram] Parsed user from initData string (query param):', userData);
-        } else {
-          // Может быть просто JSON строка
-          try {
-            userData = JSON.parse(tg.initData);
-            if (userData.user) {
-              userData = userData.user;
-            }
-            console.log('[Telegram] Parsed user from initData string (JSON):', userData);
-          } catch (e2) {
-            console.log('[Telegram] Failed to parse initData as JSON:', e2);
-          }
-        }
-      } catch (e) {
-        console.log('[Telegram] Failed to parse initData string:', e);
-      }
-    }
+    // Основной способ получения данных пользователя согласно документации Telegram Mini App
+    // Telegram.WebApp.initDataUnsafe.user содержит id и username
+    const userData = tg.initDataUnsafe?.user;
     
     if (userData && userData.id) {
       const result = {
@@ -103,11 +60,58 @@ export function getTelegramUser(): TelegramUser | null {
         language_code: userData.language_code,
         is_premium: userData.is_premium,
       };
-      console.log('[Telegram] Returning user data:', result);
+      console.log('[Telegram] User data from initDataUnsafe.user:', {
+        id: result.id,
+        username: result.username,
+        first_name: result.first_name,
+      });
       return result;
     }
 
-    console.log('[Telegram] No user data found');
+    // Если основной способ не сработал, пробуем альтернативные
+    console.log('[Telegram] initDataUnsafe.user not found, trying alternatives...');
+    
+    // Альтернативный способ 1: initData.user
+    if (tg.initData?.user) {
+      const altUserData = tg.initData.user;
+      if (altUserData && altUserData.id) {
+        console.log('[Telegram] Found user in initData.user:', altUserData);
+        return {
+          id: altUserData.id,
+          username: altUserData.username,
+          first_name: altUserData.first_name,
+          last_name: altUserData.last_name,
+          language_code: altUserData.language_code,
+          is_premium: altUserData.is_premium,
+        };
+      }
+    }
+
+    // Альтернативный способ 2: Парсим initData строку, если она есть
+    if (tg.initData && typeof tg.initData === 'string') {
+      try {
+        const params = new URLSearchParams(tg.initData);
+        const userParam = params.get('user');
+        if (userParam) {
+          const parsedUser = JSON.parse(decodeURIComponent(userParam));
+          if (parsedUser && parsedUser.id) {
+            console.log('[Telegram] Parsed user from initData string:', parsedUser);
+            return {
+              id: parsedUser.id,
+              username: parsedUser.username,
+              first_name: parsedUser.first_name,
+              last_name: parsedUser.last_name,
+              language_code: parsedUser.language_code,
+              is_premium: parsedUser.is_premium,
+            };
+          }
+        }
+      } catch (e) {
+        console.log('[Telegram] Failed to parse initData string:', e);
+      }
+    }
+
+    console.log('[Telegram] No user data found in any source');
     return null;
   } catch (error) {
     console.error('[Telegram] Error getting Telegram user:', error);
@@ -145,5 +149,32 @@ export function getTelegramWebApp(): any {
  */
 export function isTelegramWebAppAvailable(): boolean {
   return getTelegramUser() !== null;
+}
+
+/**
+ * Ожидает готовности Telegram Web App и возвращает данные пользователя
+ */
+export function waitForTelegramUser(timeout: number = 5000): Promise<TelegramUser | null> {
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    
+    const checkUser = () => {
+      const user = getTelegramUser();
+      if (user) {
+        resolve(user);
+        return;
+      }
+      
+      if (Date.now() - startTime > timeout) {
+        console.log('[Telegram] Timeout waiting for user data');
+        resolve(null);
+        return;
+      }
+      
+      setTimeout(checkUser, 100);
+    };
+    
+    checkUser();
+  });
 }
 
