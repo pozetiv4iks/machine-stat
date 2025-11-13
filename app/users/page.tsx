@@ -136,7 +136,9 @@ export default function UsersPage() {
 
   const handleEditRole = (role: Role) => {
     setEditingRole(role);
-    setRoleType(role.type || "role"); // Используем "role" по умолчанию, если type не определен
+    // Используем "role" по умолчанию, если type не определен
+    const roleTypeValue: "role" | "department" = role.type === "department" ? "department" : "role";
+    setRoleType(roleTypeValue);
     setIsRoleModalOpen(true);
   };
 
