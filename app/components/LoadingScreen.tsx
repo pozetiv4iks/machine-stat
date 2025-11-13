@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { waitForUserInitialization } from './TelegramUserInitializer';
 
 export default function LoadingScreen() {
   const [isVisible, setIsVisible] = useState(true);
@@ -18,20 +19,31 @@ export default function LoadingScreen() {
       setShowText(true);
     }, 500);
 
-    // Начинаем исчезновение через секунду после появления текста
-    const fadeTimer = setTimeout(() => {
-      setIsFading(true);
-    }, 1500);
+    // Ждем инициализации пользователя, затем скрываем экран
+    const initAndHide = async () => {
+      try {
+        // Ждем минимум 1 секунду для показа логотипа и текста
+        await Promise.all([
+          waitForUserInitialization(),
+          new Promise(resolve => setTimeout(resolve, 1000))
+        ]);
+      } catch (error) {
+        console.error("Error waiting for user initialization:", error);
+      } finally {
+        // Начинаем исчезновение
+        setIsFading(true);
+        
+        // Скрываем экран через 0.5 секунды после начала исчезновения
+        setTimeout(() => {
+          setIsVisible(false);
+        }, 500);
+      }
+    };
 
-    // Скрываем экран через 1.8 секунды
-    const hideTimer = setTimeout(() => {
-      setIsVisible(false);
-    }, 1800);
+    initAndHide();
 
     return () => {
       clearTimeout(textTimer);
-      clearTimeout(fadeTimer);
-      clearTimeout(hideTimer);
     };
   }, []);
 

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navigation from "./components/Navigation";
 import LoadingScreen from "./components/LoadingScreen";
+import TelegramUserInitializer from "./components/TelegramUserInitializer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,6 +30,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
       >
+        <TelegramUserInitializer />
         <LoadingScreen />
         <main>{children}</main>
         <Navigation />

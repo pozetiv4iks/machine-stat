@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
-const navItems = [
+const allNavItems = [
   {
     href: "/",
     label: "пользователи",
+    roles: ["админ", "супер админ"], // Только для админов
     icon: (
       <svg
         className="w-6 h-6"
@@ -26,6 +28,7 @@ const navItems = [
   {
     href: "/checklists",
     label: "чеклисты",
+    roles: ["админ", "супер админ"], // Только для админов
     icon: (
       <svg
         className="w-6 h-6"
@@ -45,6 +48,7 @@ const navItems = [
   {
     href: "/chart",
     label: "график",
+    roles: ["менеджмент", "проверяющий", "начальник отдела", "админ", "супер админ"], // Для всех кроме админов
     icon: (
       <svg
         className="w-6 h-6"
@@ -64,6 +68,7 @@ const navItems = [
   {
     href: "/calendar",
     label: "календарь",
+    roles: ["менеджмент", "проверяющий", "начальник отдела", "админ", "супер админ"], // Для всех кроме админов
     icon: (
       <svg
         className="w-6 h-6"
@@ -81,27 +86,9 @@ const navItems = [
     ),
   },
   {
-    href: "/chats",
-    label: "чаты",
-    icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-        />
-      </svg>
-    ),
-  },
-  {
     href: "/reports",
     label: "отчеты",
+    roles: ["менеджмент", "проверяющий", "начальник отдела", "админ", "супер админ"], // Для всех кроме админов
     icon: (
       <svg
         className="w-6 h-6"
@@ -118,10 +105,62 @@ const navItems = [
       </svg>
     ),
   },
+  {
+    href: "/chats",
+    label: "чаты",
+    roles: ["проверяющий", "начальник отдела", "админ", "супер админ"], // Для проверяющих и начальников отделов
+    icon: (
+      <svg
+        className="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+        />
+      </svg>
+    ),
+  },
 ];
 
 export default function Navigation() {
   const pathname = usePathname();
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Получаем роль пользователя из sessionStorage
+    if (typeof window !== "undefined") {
+      const role = sessionStorage.getItem("current_user_role");
+      setUserRole(role);
+    }
+  }, []);
+
+  // Функция для проверки, должна ли вкладка отображаться для текущей роли
+  const shouldShowItem = (item: typeof allNavItems[0]) => {
+    if (!userRole) {
+      // Если роль не определена, показываем все (для админов по умолчанию)
+      return item.roles.includes("админ") || item.roles.includes("супер админ");
+    }
+
+    // Проверяем, есть ли роль в списке разрешенных
+    if (item.roles.includes(userRole)) {
+      return true;
+    }
+
+    // Проверяем, является ли пользователь начальником отдела (роль начинается с "Начальник отдела")
+    if (userRole.startsWith("Начальник отдела") && item.roles.includes("начальник отдела")) {
+      return true;
+    }
+
+    return false;
+  };
+
+  // Фильтруем элементы навигации по роли
+  const navItems = allNavItems.filter(shouldShowItem);
 
   return (
     <nav className="fixed bottom-[3px] left-0 right-0 bg-white border-t border-gray-200 z-50">
