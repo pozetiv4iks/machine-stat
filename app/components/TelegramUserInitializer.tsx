@@ -26,30 +26,6 @@ export function waitForUserInitialization(): Promise<boolean> {
   return initializationPromise;
 }
 
-// МОКОВЫЕ ДАННЫЕ: Список пользователей для моковой проверки (для тестирования без API)
-// TODO: Удалить после подключения реального API
-const MOCK_USERS: Record<string, { role: string; id: number }> = {
-  "@ewq2112": {
-    role: "Начальник отдела",
-    id: 1,
-  },
-};
-
-// МОКОВАЯ ПРОВЕРКА: Проверяет, есть ли пользователь в моковом списке
-// TODO: Удалить после подключения реального API
-function checkMockUser(userName: string): { hasAccess: boolean; role?: string; id?: number } {
-  const mockUser = MOCK_USERS[userName];
-  if (mockUser) {
-    console.log(`[МОКОВЫЕ ДАННЫЕ] Пользователь ${userName} найден в моковом списке с ролью: ${mockUser.role}`);
-    return {
-      hasAccess: true,
-      role: mockUser.role,
-      id: mockUser.id,
-    };
-  }
-  return { hasAccess: false };
-}
-
 export default function TelegramUserInitializer() {
   const [initialized, setInitialized] = useState(false);
 
@@ -82,35 +58,7 @@ export default function TelegramUserInitializer() {
           ? `@${telegramUser.username}` 
           : `@id${telegramUser.id}`;
 
-        // МОКОВАЯ ПРОВЕРКА: Сначала проверяем моковые данные
-        // TODO: Удалить после подключения реального API
-        const mockCheck = checkMockUser(userName);
-        if (mockCheck.hasAccess) {
-          console.log(`[МОКОВЫЕ ДАННЫЕ] Используем моковые данные для пользователя ${userName}`);
-          
-          // Сохраняем моковые данные пользователя
-          const mockUserData = {
-            id: mockCheck.id || 1,
-            user_name: userName,
-            username: userName,
-            first_name: telegramUser.first_name || '',
-            last_name: telegramUser.last_name || '',
-            full_name: [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(' ') || '',
-            telegram_id: userName,
-            role: mockCheck.role || '',
-          };
-
-          sessionStorage.setItem("current_user_id", mockUserData.id.toString());
-          sessionStorage.setItem("current_user_name", mockUserData.user_name);
-          sessionStorage.setItem("current_user_role", mockUserData.role);
-          sessionStorage.setItem(sessionKey, "true");
-          
-          console.log("[МОКОВЫЕ ДАННЫЕ] User initialized from mock data:", mockUserData);
-          setInitialized(true);
-          return;
-        }
-
-        // 2. Проверяем доступ через check-access (реальный API)
+        // 2. Проверяем доступ через check-access (реальный API с fallback на моковые данные)
         const accessResponse = await checkUserAccess(userName);
         
         if (!accessResponse.has_access || !accessResponse.user) {
