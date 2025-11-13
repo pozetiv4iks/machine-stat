@@ -20,6 +20,19 @@ export default function AccessGuard({ children }: AccessGuardProps) {
 
         // Проверяем, имеет ли пользователь доступ
         if (typeof window !== "undefined") {
+          // Дополнительная проверка: убеждаемся, что данные Telegram все еще доступны
+          const tg = (window as any).Telegram?.WebApp;
+          const hasTelegramData = !!tg?.initDataUnsafe?.user;
+          
+          if (!hasTelegramData) {
+            // Если данных Telegram нет, но в sessionStorage есть старые данные - очищаем их
+            console.warn("Telegram data not available in AccessGuard - denying access");
+            sessionStorage.setItem("user_has_access", "false");
+            setHasAccess(false);
+            setIsChecking(false);
+            return;
+          }
+          
           const userHasAccess = sessionStorage.getItem("user_has_access");
           // Если user_has_access не установлен или равен "false", считаем что нет доступа
           setHasAccess(userHasAccess === "true");

@@ -464,20 +464,20 @@ export async function updateUser(id: number, userData: Partial<User>): Promise<U
     try {
       const apiData = adaptUserToAPI(userData);
       const response = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(userName)}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
         body: JSON.stringify(apiData),
-      });
+    });
 
-      if (!response.ok) {
-        throw new Error(`Failed to update user: ${response.statusText}`);
-      }
+    if (!response.ok) {
+      throw new Error(`Failed to update user: ${response.statusText}`);
+    }
 
       const data: UserResponse = await response.json();
       return adaptUserFromAPI(data);
-    } catch (error) {
+  } catch (error) {
       console.warn('API request failed, using mock data:', error);
       // При ошибке используем моковые данные
     }

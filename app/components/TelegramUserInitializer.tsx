@@ -31,38 +31,67 @@ export default function TelegramUserInitializer() {
 
   useEffect(() => {
     const initUser = async () => {
-      // Проверяем, не инициализировали ли мы уже пользователя в этой сессии
       const sessionKey = "telegram_user_initialized";
-      const alreadyInitialized = sessionStorage.getItem(sessionKey);
       
-      if (alreadyInitialized === "true") {
-        // Если уже инициализировано, просто устанавливаем статус
-        setInitialized(true);
-        return;
-      }
-
       if (typeof window === "undefined") {
         return;
       }
 
-      try {
-        // 1. Получаем данные из Telegram Web App
-        const tg = (window as any).Telegram?.WebApp;
-        if (!tg?.initDataUnsafe?.user) {
-          console.warn("Telegram Web App user data not available");
-          // Если нет данных Telegram, считаем что нет доступа
-          sessionStorage.setItem("user_has_access", "false");
-          sessionStorage.setItem(sessionKey, "true");
+      // 1. Сначала проверяем актуальность данных Telegram Web App
+      const tg = (window as any).Telegram?.WebApp;
+      const hasTelegramData = !!tg?.initDataUnsafe?.user;
+      
+      // Если нет данных Telegram, очищаем sessionStorage и устанавливаем "нет доступа"
+      if (!hasTelegramData) {
+        console.warn("Telegram Web App user data not available - clearing session");
+        // Очищаем все данные сессии
+        sessionStorage.removeItem("user_has_access");
+        sessionStorage.removeItem("current_user_id");
+        sessionStorage.removeItem("current_user_name");
+        sessionStorage.removeItem("current_user_role");
+        sessionStorage.removeItem(sessionKey);
+        sessionStorage.setItem("user_has_access", "false");
+        sessionStorage.setItem(sessionKey, "true");
+        setInitialized(true);
+        return;
+      }
+
+      // 2. Проверяем, не инициализировали ли мы уже пользователя в этой сессии
+      const alreadyInitialized = sessionStorage.getItem(sessionKey);
+      
+      // Если уже инициализировано, проверяем что данные Telegram все еще актуальны
+      if (alreadyInitialized === "true") {
+        // Проверяем, что текущий пользователь в Telegram совпадает с сохраненным
+        const telegramUser = tg.initDataUnsafe.user;
+        const currentUserName = telegramUser.username 
+          ? `@${telegramUser.username}` 
+          : `@id${telegramUser.id}`;
+        const savedUserName = sessionStorage.getItem("current_user_name");
+        
+        // Если пользователь изменился или данные не совпадают, переинициализируем
+        if (savedUserName && savedUserName !== currentUserName) {
+          console.log("User changed, reinitializing...");
+          // Очищаем старые данные и продолжаем инициализацию
+          sessionStorage.removeItem("user_has_access");
+          sessionStorage.removeItem("current_user_id");
+          sessionStorage.removeItem("current_user_name");
+          sessionStorage.removeItem("current_user_role");
+          sessionStorage.removeItem(sessionKey);
+        } else {
+          // Данные актуальны, просто устанавливаем статус
           setInitialized(true);
           return;
         }
+      }
 
+      try {
+        // 3. Формируем userName для проверки доступа
         const telegramUser = tg.initDataUnsafe.user;
         const userName = telegramUser.username 
           ? `@${telegramUser.username}` 
           : `@id${telegramUser.id}`;
 
-        // 2. Проверяем доступ через check-access
+        // 4. СНАЧАЛА проверяем доступ через check-access API
         const accessResponse = await checkUserAccess(userName);
         
         if (!accessResponse.has_access || !accessResponse.user) {
@@ -74,34 +103,46 @@ export default function TelegramUserInitializer() {
           return;
         }
 
-        // Сохраняем информацию о том, что пользователь имеет доступ
-        sessionStorage.setItem("user_has_access", "true");
+        // 5. Если пользователь одобрен, получаем Telegram ID
+        const telegramId = userName; // Telegram ID формируется из userName
 
-        // 3. Получаем полные данные пользователя
+        // 6. Отправляем Telegram ID в БД через PUT /users/{user_name}
+        // Получаем текущие данные пользователя для обновления
         let user = await getUserByUsername(userName);
         
-        // 4. Проверяем, первый ли это вход (нет telegram_id или он не совпадает)
-        const isFirstLogin = !user.telegram_id || user.telegram_id !== userName;
+        // Обновляем пользователя с Telegram ID в БД
+        const telegramUserData = {
+          user_name: userName,
+          username: userName,
+          first_name: telegramUser.first_name || user.first_name || '',
+          last_name: telegramUser.last_name || user.last_name || '',
+          full_name: [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(' ') || user.full_name || '',
+          telegram_id: telegramId, // Отправляем Telegram ID в БД
+          role: user.role || accessResponse.user.role, // Сохраняем существующую роль
+        };
         
-        if (isFirstLogin) {
-          // 5. Обновляем пользователя с ID из Telegram через PUT /users/{user_name}
-          const telegramUserData = {
-            user_name: userName,
-            username: userName,
-            first_name: telegramUser.first_name || user.first_name || '',
-            last_name: telegramUser.last_name || user.last_name || '',
-            full_name: [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(' ') || user.full_name || '',
-            telegram_id: userName,
-            role: user.role || accessResponse.user.role,
-          };
-          
-          user = await updateUserByUsername(userName, telegramUserData);
+        // Отправляем обновление в БД (возвращает обновленного пользователя)
+        user = await updateUserByUsername(userName, telegramUserData);
+
+        // 7. Получаем обновленного пользователя из БД для проверки актуального статуса/роли
+        user = await getUserByUsername(userName);
+        
+        // 8. По статусу/роли из БД определяем права доступа
+        const userRole = user.role || '';
+        const hasAccess = !!userRole && userRole.trim() !== '';
+        
+        if (!hasAccess) {
+          console.warn("User has no role assigned, denying access");
+          sessionStorage.setItem("user_has_access", "false");
+          sessionStorage.setItem(sessionKey, "true");
+          setInitialized(true);
+          return;
         }
 
-        // 6. Сохраняем информацию о пользователе в sessionStorage
+        // 9. Сохраняем информацию о пользователе в sessionStorage
         sessionStorage.setItem("current_user_id", user.id.toString());
         sessionStorage.setItem("current_user_name", user.user_name || user.username || "");
-        sessionStorage.setItem("current_user_role", user.role || "");
+        sessionStorage.setItem("current_user_role", userRole);
         sessionStorage.setItem("user_has_access", "true");
         sessionStorage.setItem(sessionKey, "true");
         
