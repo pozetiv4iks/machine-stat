@@ -6,7 +6,7 @@ export const mockUsers: User[] = [
     username: "ivan_ivanov",
     full_name: "Иван Иванов",
     role: "супер админ",
-    telegram_id: "@ivan_ivanov",
+    telegram_id: "@only1uck",
     created_at: "2024-01-10T10:00:00Z",
   },
   {
