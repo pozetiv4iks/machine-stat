@@ -170,7 +170,7 @@ export default function UsersPage() {
 
   const handleEditRole = (role: Role) => {
     setEditingRole(role);
-    setRoleType(role.type);
+    setRoleType(role.type || "role");
     setIsRoleModalOpen(true);
   };
 
@@ -186,7 +186,7 @@ export default function UsersPage() {
   };
 
   const handleConfirmDeleteRole = async () => {
-    if (!roleToDelete) return;
+    if (!roleToDelete || roleToDelete.id === undefined) return;
 
     try {
       setDeletingRole(true);
@@ -432,7 +432,7 @@ export default function UsersPage() {
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                 <p className="text-red-700">{error}</p>
                 <button
-                  onClick={loadRoles}
+                  onClick={loadRolesAndDepartments}
                   className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
                 >
                   Попробовать снова
