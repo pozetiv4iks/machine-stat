@@ -205,45 +205,33 @@ export async function getUsers(): Promise<User[]> {
     return getMockUsers();
   }
 
-  if (USE_API_FIRST) {
-    try {
-      const url = `${API_BASE_URL}/users`;
-      console.log('[API] Fetching users from:', url);
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+  // Всегда используем API, без fallback на моковые данные
+  const url = `${API_BASE_URL}/users`;
+  console.log('[API] Fetching users from:', url);
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
 
-      console.log('[API] Response status:', response.status, response.statusText);
+  console.log('[API] Response status:', response.status, response.statusText);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[API] Error response:', errorText);
-        throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
-      }
-
-      const data: UserResponse[] = await response.json();
-      console.log('[API] Received users:', data.length, 'items');
-      console.log('[API] Users data:', data);
-      
-      const adaptedUsers = Array.isArray(data) ? data.map(adaptUserFromAPI) : [];
-      console.log('[API] Adapted users:', adaptedUsers);
-      
-      return adaptedUsers;
-    } catch (error) {
-      console.warn('[API] Request failed, using mock data:', error);
-      // При ошибке используем моковые данные
-      await new Promise(resolve => setTimeout(resolve, 300));
-      return getMockUsers();
-    }
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[API] Error response:', errorText);
+    throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
   }
 
-  // Fallback на моковые данные
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return getMockUsers();
+  const data: UserResponse[] = await response.json();
+  console.log('[API] Received users:', data.length, 'items');
+  console.log('[API] Users data:', data);
+  
+  const adaptedUsers = Array.isArray(data) ? data.map(adaptUserFromAPI) : [];
+  console.log('[API] Adapted users:', adaptedUsers);
+  
+  return adaptedUsers;
 }
 
 export async function getUserById(id: number): Promise<User> {
