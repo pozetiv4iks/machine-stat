@@ -21,6 +21,7 @@ export interface UserResponse {
   last_name: string;
   user_name: string;
   role: string;
+  telegram_id?: string; // Может быть в ответе API
 }
 
 export interface UserAccessResponse {
@@ -155,6 +156,7 @@ function adaptUserFromAPI(apiUser: UserResponse): User {
     username: apiUser.user_name,
     full_name: `${apiUser.first_name} ${apiUser.last_name}`.trim(),
     role: apiUser.role,
+    telegram_id: apiUser.telegram_id,
     first_name: apiUser.first_name,
     last_name: apiUser.last_name,
     user_name: apiUser.user_name,
@@ -162,34 +164,32 @@ function adaptUserFromAPI(apiUser: UserResponse): User {
 }
 
 function adaptUserToAPI(user: Partial<User>): Partial<UserResponse> {
-  // If user has first_name and last_name, use them
-  if (user.first_name && user.last_name) {
-    return {
-      first_name: user.first_name,
-      last_name: user.last_name,
-      user_name: user.user_name || user.username || '',
-      role: user.role || '',
-    };
-  }
-  // Otherwise, try to split full_name
-  if (user.full_name) {
-    const parts = user.full_name.trim().split(/\s+/);
-    const first = parts[0] || '';
-    const last = parts.slice(1).join(' ') || '';
-    return {
-      first_name: first,
-      last_name: last,
-      user_name: user.user_name || user.username || '',
-      role: user.role || '',
-    };
-  }
-  // Fallback
-  return {
-    first_name: user.first_name || '',
-    last_name: user.last_name || '',
+  const baseData: any = {
     user_name: user.user_name || user.username || '',
     role: user.role || '',
   };
+  
+  // If user has first_name and last_name, use them
+  if (user.first_name && user.last_name) {
+    baseData.first_name = user.first_name;
+    baseData.last_name = user.last_name;
+  } else if (user.full_name) {
+    // Otherwise, try to split full_name
+    const parts = user.full_name.trim().split(/\s+/);
+    baseData.first_name = parts[0] || '';
+    baseData.last_name = parts.slice(1).join(' ') || '';
+  } else {
+    // Fallback
+    baseData.first_name = user.first_name || '';
+    baseData.last_name = user.last_name || '';
+  }
+  
+  // Добавляем telegram_id, если он есть
+  if (user.telegram_id) {
+    baseData.telegram_id = user.telegram_id;
+  }
+  
+  return baseData;
 }
 
 // Helper function to get mock users
@@ -275,7 +275,8 @@ export async function checkUserAccess(userName: string): Promise<UserAccessRespo
 
   if (USE_API_FIRST) {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/check-access?user_name=${encodeURIComponent(userName)}`, {
+      const url = `${API_BASE_URL}/users/check-access?user_name=${encodeURIComponent(userName)}`;
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -283,7 +284,15 @@ export async function checkUserAccess(userName: string): Promise<UserAccessRespo
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to check user access: ${response.statusText}`);
+        // Если 404 или другой ошибка, возвращаем has_access: false
+        if (response.status === 404) {
+          return {
+            has_access: false,
+            message: "User not found",
+            user: null,
+          };
+        }
+        throw new Error(`Failed to check user access: ${response.status} ${response.statusText}`);
       }
 
       const data: UserAccessResponse = await response.json();
@@ -334,20 +343,24 @@ export async function getUserByUsername(userName: string): Promise<User> {
 
   if (USE_API_FIRST) {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(userName)}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+      const url = `${API_BASE_URL}/users/${encodeURIComponent(userName)}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch user: ${response.statusText}`);
-    }
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error(`User with username ${userName} not found`);
+        }
+        throw new Error(`Failed to fetch user: ${response.status} ${response.statusText}`);
+      }
 
       const data: UserResponse = await response.json();
       return adaptUserFromAPI(data);
-  } catch (error) {
+    } catch (error) {
       console.warn('API request failed, using mock data:', error);
       // При ошибке используем моковые данные
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -555,7 +568,8 @@ export async function updateUserByUsername(userName: string, userData: Partial<U
   if (USE_API_FIRST) {
     try {
       const apiData = adaptUserToAPI({ ...userData, user_name: userName, username: userName });
-      const response = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(userName)}`, {
+      const url = `${API_BASE_URL}/users/${encodeURIComponent(userName)}`;
+      const response = await fetch(url, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -564,7 +578,10 @@ export async function updateUserByUsername(userName: string, userData: Partial<U
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to update user: ${response.statusText}`);
+        if (response.status === 404) {
+          throw new Error(`User with username ${userName} not found`);
+        }
+        throw new Error(`Failed to update user: ${response.status} ${response.statusText}`);
       }
 
       const data: UserResponse = await response.json();
