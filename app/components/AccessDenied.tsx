@@ -11,32 +11,58 @@ export default function AccessDenied() {
     const getUserInfo = () => {
       if (typeof window === 'undefined') return;
 
-      // Приоритет: сначала пробуем получить из Telegram Web App (самый актуальный источник)
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg?.initDataUnsafe?.user) {
-        const telegramUser = tg.initDataUnsafe.user;
-        const tgUserName = telegramUser.username 
-          ? `@${telegramUser.username}` 
-          : `@id${telegramUser.id}`;
+      try {
+        // Приоритет: сначала пробуем получить из Telegram Web App (самый актуальный источник)
+        const tg = (window as any).Telegram?.WebApp;
         
-        setUserName(tgUserName);
-        if (telegramUser.id) {
-          setUserId(telegramUser.id.toString());
+        // Проверяем наличие Telegram Web App
+        if (tg) {
+          // Пробуем разные способы доступа к данным
+          const userData = tg.initDataUnsafe?.user || tg.initData?.user;
+          
+          if (userData) {
+            const tgUserName = userData.username 
+              ? `@${userData.username}` 
+              : `@id${userData.id}`;
+            
+            if (tgUserName) {
+              setUserName(tgUserName);
+            }
+            if (userData.id) {
+              setUserId(userData.id.toString());
+            }
+            
+            // Если получили данные из Telegram, выходим
+            if (tgUserName || userData.id) {
+              return;
+            }
+          }
         }
-        return; // Если получили данные из Telegram, выходим
-      }
 
-      // Если Telegram Web App недоступен, пробуем получить из sessionStorage
-      const storedUserName = sessionStorage.getItem('current_user_name');
-      const storedUserId = sessionStorage.getItem('current_user_id');
+        // Если Telegram Web App недоступен, пробуем получить из sessionStorage
+        const storedUserName = sessionStorage.getItem('current_user_name');
+        const storedUserId = sessionStorage.getItem('current_user_id');
 
-      if (storedUserName) {
-        setUserName(storedUserName);
-      }
-      if (storedUserId) {
-        setUserId(storedUserId);
+        if (storedUserName) {
+          setUserName(storedUserName);
+        }
+        if (storedUserId) {
+          setUserId(storedUserId);
+        }
+      } catch (error) {
+        console.error('Error getting user info:', error);
+        // В случае ошибки пробуем получить из sessionStorage
+        const storedUserName = sessionStorage.getItem('current_user_name');
+        const storedUserId = sessionStorage.getItem('current_user_id');
+        if (storedUserName) setUserName(storedUserName);
+        if (storedUserId) setUserId(storedUserId);
       }
     };
+
+    // Ждем немного, чтобы Telegram Web App успел инициализироваться
+    const initTimer = setTimeout(() => {
+      getUserInfo();
+    }, 100);
 
     // Получаем информацию сразу
     getUserInfo();
@@ -47,6 +73,7 @@ export default function AccessDenied() {
     }, 500);
 
     return () => {
+      clearTimeout(initTimer);
       clearInterval(checkInterval);
     };
   }, []);

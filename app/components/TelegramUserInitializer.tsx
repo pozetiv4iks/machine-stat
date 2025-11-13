@@ -41,16 +41,25 @@ export default function TelegramUserInitializer() {
       const tg = (window as any).Telegram?.WebApp;
       const hasTelegramData = !!tg?.initDataUnsafe?.user;
       
-      // Если нет данных Telegram, очищаем sessionStorage и устанавливаем "нет доступа"
+      // Если нет данных Telegram, проверяем есть ли сохраненные данные
       if (!hasTelegramData) {
         console.warn("Telegram Web App user data not available - clearing session");
-        // Очищаем все данные сессии
+        // Очищаем только флаг доступа, но сохраняем данные пользователя если они есть
+        const existingUserName = sessionStorage.getItem("current_user_name");
+        const existingUserId = sessionStorage.getItem("current_user_id");
+        
         sessionStorage.removeItem("user_has_access");
-        sessionStorage.removeItem("current_user_id");
-        sessionStorage.removeItem("current_user_name");
         sessionStorage.removeItem("current_user_role");
-        sessionStorage.removeItem(sessionKey);
         sessionStorage.setItem("user_has_access", "false");
+        
+        // Сохраняем существующие данные пользователя если они есть
+        if (existingUserName) {
+          sessionStorage.setItem("current_user_name", existingUserName);
+        }
+        if (existingUserId) {
+          sessionStorage.setItem("current_user_id", existingUserId);
+        }
+        
         sessionStorage.setItem(sessionKey, "true");
         setInitialized(true);
         return;
@@ -96,6 +105,11 @@ export default function TelegramUserInitializer() {
         
         if (!accessResponse.has_access || !accessResponse.user) {
           console.warn("User does not have access:", accessResponse.message);
+          // Сохраняем данные пользователя из Telegram для отображения на экране ошибки
+          sessionStorage.setItem("current_user_name", userName);
+          if (telegramUser.id) {
+            sessionStorage.setItem("current_user_id", telegramUser.id.toString());
+          }
           // Сохраняем информацию о том, что пользователь не имеет доступа
           sessionStorage.setItem("user_has_access", "false");
           sessionStorage.setItem(sessionKey, "true");
