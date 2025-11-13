@@ -3,83 +3,14 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { waitForUserInitialization } from './TelegramUserInitializer';
-import { getTelegramUser, getTelegramUserName, waitForTelegramUser } from '../utils/telegram';
 
 export default function LoadingScreen() {
   const [isVisible, setIsVisible] = useState(true);
   const [isFading, setIsFading] = useState(false);
   const [showLogo, setShowLogo] = useState(false);
   const [showText, setShowText] = useState(false);
-  const [userName, setUserName] = useState<string>('');
-  const [userId, setUserId] = useState<string>('');
 
   useEffect(() => {
-    // Получаем данные пользователя из Telegram Web App или sessionStorage
-    const getUserInfo = () => {
-      if (typeof window === 'undefined') return;
-
-      try {
-        // Приоритет: сначала пробуем получить из Telegram Web App (самый актуальный источник)
-        const telegramUser = getTelegramUser();
-        
-        if (telegramUser) {
-          const tgUserName = getTelegramUserName();
-          
-          if (tgUserName) {
-            setUserName(tgUserName);
-          }
-          if (telegramUser.id) {
-            setUserId(telegramUser.id.toString());
-          }
-          
-          // Если получили данные из Telegram, выходим
-          if (tgUserName || telegramUser.id) {
-            return;
-          }
-        }
-
-        // Если Telegram Web App недоступен, пробуем получить из sessionStorage
-        const storedUserName = sessionStorage.getItem('current_user_name');
-        // Приоритет: сначала telegram_user_id (ID из Telegram), потом current_user_id (ID из БД)
-        const storedTelegramUserId = sessionStorage.getItem('telegram_user_id');
-        const storedUserId = storedTelegramUserId || sessionStorage.getItem('current_user_id');
-
-        if (storedUserName) {
-          setUserName(storedUserName);
-        }
-        if (storedUserId) {
-          setUserId(storedUserId);
-        }
-      } catch (error) {
-        console.error('Error getting user info:', error);
-        // В случае ошибки пробуем получить из sessionStorage
-        const storedUserName = sessionStorage.getItem('current_user_name');
-        const storedTelegramUserId = sessionStorage.getItem('telegram_user_id');
-        const storedUserId = storedTelegramUserId || sessionStorage.getItem('current_user_id');
-        if (storedUserName) setUserName(storedUserName);
-        if (storedUserId) setUserId(storedUserId);
-      }
-    };
-
-    // Получаем информацию о пользователе
-    getUserInfo();
-
-    // Ожидаем готовности Telegram Web App и получаем данные пользователя
-    waitForTelegramUser(3000).then((user) => {
-      if (user) {
-        const tgUserName = user.username 
-          ? `@${user.username}` 
-          : `@id${user.id}`;
-        setUserName(tgUserName);
-        setUserId(user.id.toString());
-      }
-    });
-
-    // Периодически проверяем обновление данных (на случай, если они появятся позже)
-    const checkInterval = setInterval(() => {
-      getUserInfo();
-    }, 500);
-
     // Логотип появляется сразу
     setShowLogo(true);
     
@@ -96,9 +27,6 @@ export default function LoadingScreen() {
           waitForUserInitialization(),
           new Promise(resolve => setTimeout(resolve, 1000))
         ]);
-        
-        // После инициализации обновляем данные пользователя
-        getUserInfo();
       } catch (error) {
         console.error("Error waiting for user initialization:", error);
       } finally {
@@ -116,7 +44,6 @@ export default function LoadingScreen() {
 
     return () => {
       clearTimeout(textTimer);
-      clearInterval(checkInterval);
     };
   }, []);
 
@@ -161,18 +88,6 @@ export default function LoadingScreen() {
         >
           Miran MiniApp
         </h1>
-      </div>
-
-      {/* Информация о пользователе внизу - всегда показываем */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
-        <div className="text-sm text-gray-600 space-y-1">
-          <div className="font-medium">
-            Логин: <span className="text-gray-800">{userName || 'не определен'}</span>
-          </div>
-          <div className="font-medium">
-            ID: <span className="text-gray-800">{userId || 'не определен'}</span>
-          </div>
-        </div>
       </div>
     </div>
   );
