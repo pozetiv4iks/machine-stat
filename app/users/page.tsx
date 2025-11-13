@@ -154,7 +154,10 @@ export default function UsersPage() {
   };
 
   const handleConfirmDeleteRole = async () => {
-    if (!roleToDelete) return;
+    if (!roleToDelete || roleToDelete.id === undefined) {
+      alert("Не удалось удалить роль/отдел: ID не найден");
+      return;
+    }
 
     try {
       setDeletingRole(true);
