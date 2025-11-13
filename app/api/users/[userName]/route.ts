@@ -5,9 +5,10 @@ const API_BASE_URL = 'https://miran-hackathon.onrender.com';
 // PUT - обновление пользователя
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { userName: string } }
+  context: { params: Promise<{ userName: string }> }
 ) {
   try {
+    const params = await context.params;
     const userName = decodeURIComponent(params.userName);
     const body = await request.json();
     
@@ -56,9 +57,10 @@ export async function PUT(
 // DELETE - удаление пользователя
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { userName: string } }
+  context: { params: Promise<{ userName: string }> }
 ) {
   try {
+    const params = await context.params;
     const userName = decodeURIComponent(params.userName);
     
     console.log('[API Proxy] Deleting user:', userName);
