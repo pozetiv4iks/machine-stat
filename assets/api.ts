@@ -1,4 +1,6 @@
 const API_BASE_URL = 'https://miran-hackathon.onrender.com';
+// Используем Next.js API route как прокси для обхода CORS
+const USE_API_PROXY = true; // Использовать прокси через Next.js API routes
 const USE_MOCK_DATA = false; // Принудительное использование моковых данных (если true, API не вызывается)
 const USE_API_FIRST = true; // Сначала пытаться использовать API, при ошибке - моковые данные
 
@@ -205,33 +207,64 @@ export async function getUsers(): Promise<User[]> {
     return getMockUsers();
   }
 
-  // Всегда используем API, без fallback на моковые данные
-  const url = `${API_BASE_URL}/users`;
+  // Используем прокси через Next.js API route для обхода CORS
+  const url = USE_API_PROXY ? '/api/users' : `${API_BASE_URL}/users`;
   console.log('[API] Fetching users from:', url);
   
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // Отключаем кеширование для получения актуальных данных
+      cache: 'no-store',
+    });
 
-  console.log('[API] Response status:', response.status, response.statusText);
+    console.log('[API] Response status:', response.status, response.statusText);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[API] Error response:', errorText);
-    throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { error: await response.text() };
+      }
+      console.error('[API] Error response:', errorData);
+      throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
+    }
+
+    const data: UserResponse[] = await response.json();
+    console.log('[API] Received users:', data.length, 'items');
+    console.log('[API] Users data:', data);
+    
+    const adaptedUsers = Array.isArray(data) ? data.map(adaptUserFromAPI) : [];
+    console.log('[API] Adapted users:', adaptedUsers);
+    
+    return adaptedUsers;
+  } catch (error) {
+    console.error('[API] Fetch error:', error);
+    // Пробуем прямой запрос к API, если прокси не сработал
+    if (USE_API_PROXY && error instanceof TypeError && error.message.includes('fetch')) {
+      console.log('[API] Proxy failed, trying direct API call...');
+      const directUrl = `${API_BASE_URL}/users`;
+      const directResponse = await fetch(directUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!directResponse.ok) {
+        throw new Error(`Failed to fetch users: ${directResponse.status} ${directResponse.statusText}`);
+      }
+      
+      const data: UserResponse[] = await directResponse.json();
+      const adaptedUsers = Array.isArray(data) ? data.map(adaptUserFromAPI) : [];
+      return adaptedUsers;
+    }
+    throw error;
   }
-
-  const data: UserResponse[] = await response.json();
-  console.log('[API] Received users:', data.length, 'items');
-  console.log('[API] Users data:', data);
-  
-  const adaptedUsers = Array.isArray(data) ? data.map(adaptUserFromAPI) : [];
-  console.log('[API] Adapted users:', adaptedUsers);
-  
-  return adaptedUsers;
 }
 
 export async function getUserById(id: number): Promise<User> {
