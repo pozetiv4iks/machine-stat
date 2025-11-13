@@ -38,7 +38,13 @@ export default function ChecklistCreateModal({
     if (isOpen && checklist) {
       // Режим редактирования - заполняем форму данными чеклиста
       setTitle(checklist.title || "");
-      setDescription(checklist.description || "");
+      // Обрабатываем description как строку или массив строк
+      const descriptionValue = checklist.description 
+        ? (Array.isArray(checklist.description) 
+            ? checklist.description.join('\n') 
+            : checklist.description)
+        : "";
+      setDescription(descriptionValue);
       if (checklist.items && checklist.items.length > 0) {
         setItems(
           checklist.items.map((item, index) => ({
