@@ -40,7 +40,9 @@ export default function LoadingScreen() {
 
         // Если Telegram Web App недоступен, пробуем получить из sessionStorage
         const storedUserName = sessionStorage.getItem('current_user_name');
-        const storedUserId = sessionStorage.getItem('current_user_id');
+        // Приоритет: сначала telegram_user_id (ID из Telegram), потом current_user_id (ID из БД)
+        const storedTelegramUserId = sessionStorage.getItem('telegram_user_id');
+        const storedUserId = storedTelegramUserId || sessionStorage.getItem('current_user_id');
 
         if (storedUserName) {
           setUserName(storedUserName);
@@ -52,7 +54,8 @@ export default function LoadingScreen() {
         console.error('Error getting user info:', error);
         // В случае ошибки пробуем получить из sessionStorage
         const storedUserName = sessionStorage.getItem('current_user_name');
-        const storedUserId = sessionStorage.getItem('current_user_id');
+        const storedTelegramUserId = sessionStorage.getItem('telegram_user_id');
+        const storedUserId = storedTelegramUserId || sessionStorage.getItem('current_user_id');
         if (storedUserName) setUserName(storedUserName);
         if (storedUserId) setUserId(storedUserId);
       }

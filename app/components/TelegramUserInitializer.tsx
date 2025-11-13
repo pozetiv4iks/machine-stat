@@ -115,7 +115,7 @@ export default function TelegramUserInitializer() {
           // Сохраняем данные пользователя из Telegram для отображения на экране ошибки
           sessionStorage.setItem("current_user_name", userName);
           if (currentTelegramUser.id) {
-            sessionStorage.setItem("current_user_id", currentTelegramUser.id.toString());
+            sessionStorage.setItem("telegram_user_id", currentTelegramUser.id.toString());
           }
           // Сохраняем информацию о том, что пользователь не имеет доступа
           sessionStorage.setItem("user_has_access", "false");
@@ -124,8 +124,9 @@ export default function TelegramUserInitializer() {
           return;
         }
 
-        // 5. Если пользователь одобрен, получаем Telegram ID
-        const telegramId = userName; // Telegram ID формируется из userName
+        // 5. Если пользователь одобрен, получаем Telegram ID (используем ID из Telegram)
+        const telegramId = userName; // Telegram ID формируется из userName (@username или @id123)
+        const telegramUserId = currentTelegramUser.id.toString(); // Числовой ID пользователя из Telegram
 
         // 6. Отправляем Telegram ID в БД через PUT /users/{user_name}
         // Получаем текущие данные пользователя для обновления
@@ -138,7 +139,7 @@ export default function TelegramUserInitializer() {
           first_name: currentTelegramUser.first_name || user.first_name || '',
           last_name: currentTelegramUser.last_name || user.last_name || '',
           full_name: [currentTelegramUser.first_name, currentTelegramUser.last_name].filter(Boolean).join(' ') || user.full_name || '',
-          telegram_id: telegramId, // Отправляем Telegram ID в БД
+          telegram_id: telegramId, // Отправляем Telegram ID в БД (@username или @id123)
           role: user.role || accessResponse.user.role, // Сохраняем существующую роль
         };
         
@@ -161,7 +162,9 @@ export default function TelegramUserInitializer() {
         }
 
         // 9. Сохраняем информацию о пользователе в sessionStorage
-        sessionStorage.setItem("current_user_id", user.id.toString());
+        // Сохраняем ID пользователя из БД и ID из Telegram
+        sessionStorage.setItem("current_user_id", user.id.toString()); // ID из БД
+        sessionStorage.setItem("telegram_user_id", telegramUserId); // Числовой ID из Telegram
         sessionStorage.setItem("current_user_name", user.user_name || user.username || "");
         sessionStorage.setItem("current_user_role", userRole);
         sessionStorage.setItem("user_has_access", "true");
