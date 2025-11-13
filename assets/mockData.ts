@@ -1,4 +1,4 @@
-import { User, Checklist, ChartData, Chat, Message } from './api';
+import { User, Checklist, ChartData, Chat, Message, Report } from './api';
 
 export const mockUsers: User[] = [
   {
@@ -51,63 +51,7 @@ export const mockUsers: User[] = [
   },
 ];
 
-export const mockChecklists: Checklist[] = [
-  {
-    id: 1,
-    title: "Ежедневная проверка оборудования",
-    description: "Проверка работоспособности основного оборудования",
-    status: "Выполнено",
-    created_at: "2024-01-15T08:00:00Z",
-    updated_at: "2024-01-15T18:00:00Z",
-    items: [
-      { id: 1, text: "Проверка температуры", completed: true },
-      { id: 2, text: "Проверка давления", completed: true },
-      { id: 3, text: "Осмотр на утечки", completed: true },
-      { id: 4, text: "Проверка смазки", completed: true },
-    ],
-  },
-  {
-    id: 2,
-    title: "Еженедельная проверка безопасности",
-    description: "Комплексная проверка систем безопасности",
-    status: "В процессе",
-    created_at: "2024-01-16T09:00:00Z",
-    updated_at: "2024-01-16T14:30:00Z",
-    items: [
-      { id: 5, text: "Проверка огнетушителей", completed: true },
-      { id: 6, text: "Проверка аварийных выходов", completed: true },
-      { id: 7, text: "Проверка сигнализации", completed: false },
-      { id: 8, text: "Проверка освещения", completed: false },
-    ],
-  },
-  {
-    id: 3,
-    title: "Месячная проверка качества",
-    description: "Контроль качества продукции и оборудования",
-    status: "Не начато",
-    created_at: "2024-01-20T10:00:00Z",
-    updated_at: "2024-01-20T10:00:00Z",
-    items: [
-      { id: 9, text: "Проверка качества продукции", completed: false },
-      { id: 10, text: "Калибровка оборудования", completed: false },
-      { id: 11, text: "Проверка документации", completed: false },
-      { id: 12, text: "Аудит процессов", completed: false },
-    ],
-  },
-  {
-    id: 4,
-    title: "Ежедневная уборка производственных помещений",
-    description: "Поддержание чистоты на рабочем месте",
-    status: "Выполнено",
-    created_at: "2024-01-21T07:00:00Z",
-    updated_at: "2024-01-21T19:00:00Z",
-    items: [
-      { id: 13, text: "Уборка полов", completed: true },
-      { id: 14, text: "Очистка оборудования", completed: true },
-      { id: 15, text: "Вынос мусора", completed: true },
-    ],
-  },
-];
+export const mockChecklists: Checklist[] = [];
 
 export const mockChartDataWeek: ChartData[] = [
   { date: "2024-01-15", value: 4, label: "Пн" },
@@ -231,4 +175,6 @@ export const mockChats: Chat[] = [
     updated_at: "2024-01-18T14:00:00Z",
   },
 ];
+
+export const mockReports: Report[] = [];
 

@@ -280,8 +280,56 @@ export default function CalendarPage() {
       }));
       // Обновляем календарь для перерисовки статусов дней
       setRefreshKey((prev) => prev + 1);
-      // Здесь можно добавить вызов API для сохранения данных
-      // await saveDateDepartments(selectedDate, departments);
+      
+      // Создаем отчеты для отделов с назначенными проверяющими и чеклистами
+      const { createReport, getChecklistById, getUsers } = await import("@/assets/api");
+      const users = await getUsers();
+      
+      for (let i = 0; i < departments.length; i++) {
+        const dept = departments[i];
+        if (dept.inspector && dept.checklist_id) {
+          // Находим ID проверяющего по имени
+          const inspector = users.find(u => 
+            u.full_name === dept.inspector || u.username === dept.inspector
+          );
+          
+          if (inspector) {
+            // Получаем чеклист
+            const checklist = await getChecklistById(dept.checklist_id);
+            
+            // Создаем элементы отчета на основе чеклиста
+            const reportItems = (checklist.items || []).map((item, index) => ({
+              id: index + 1,
+              checklist_item_id: item.id,
+              text: item.text,
+              completed: false,
+              description: item.description,
+              reference_image: item.reference_image,
+            }));
+            
+            // Проверяем, существует ли уже отчет
+            const { getReports } = await import("@/assets/api");
+            const existingReports = await getReports(inspector.id);
+            const existingReport = existingReports.find(r => 
+              r.date === dateKey && 
+              r.checklist_id === dept.checklist_id &&
+              r.department_index === i
+            );
+            
+            if (!existingReport) {
+              // Создаем новый отчет
+              await createReport({
+                date: dateKey,
+                inspector_id: inspector.id,
+                checklist_id: dept.checklist_id,
+                department_index: i,
+                items: reportItems,
+                status: "Не начато",
+              });
+            }
+          }
+        }
+      }
     }
   };
 
@@ -291,7 +339,7 @@ export default function CalendarPage() {
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* Верхний левый угол */}
         <div
-          className="absolute rounded-full bg-[#E1F5C6]"
+          className="absolute rounded-full bg-[#DBEDAE]"
           style={{
             width: "700px",
             height: "700px",
@@ -303,7 +351,7 @@ export default function CalendarPage() {
         />
         {/* Нижний правый угол */}
         <div
-          className="absolute rounded-full bg-[#E1F5C6]"
+          className="absolute rounded-full bg-[#DBEDAE]"
           style={{
             width: "700px",
             height: "700px",

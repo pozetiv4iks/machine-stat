@@ -8,7 +8,8 @@ import {
   mockChartDataMonth, 
   mockChartDataYear,
   mockChats,
-  mockMessages
+  mockMessages,
+  mockReports
 } from './mockData';
 
 export interface User {
@@ -34,6 +35,8 @@ export interface ChecklistItem {
   id: number;
   text: string;
   completed: boolean;
+  description?: string;
+  reference_image?: string; // URL или base64 строка для эталонного фото
 }
 
 export interface ChartData {
@@ -56,6 +59,28 @@ export interface Chat {
   user2_id: number;
   last_message?: Message;
   unread_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReportItem {
+  id: number;
+  checklist_item_id: number;
+  text: string;
+  completed: boolean;
+  description?: string;
+  reference_image?: string; // Эталонное фото из чеклиста
+  report_photo?: string; // Фото, приложенное проверяющим
+}
+
+export interface Report {
+  id: number;
+  date: string;
+  inspector_id: number;
+  checklist_id: number;
+  department_index: number;
+  items: ReportItem[];
+  status: string; // "Не начато", "В процессе", "Завершено"
   created_at: string;
   updated_at: string;
 }
@@ -272,6 +297,22 @@ export async function getChecklistById(id: number): Promise<Checklist> {
 }
 
 export async function createChecklist(checklistData: Partial<Checklist>): Promise<Checklist> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const newId = Math.max(...mockChecklists.map(c => c.id), 0) + 1;
+    const newChecklist: Checklist = {
+      id: newId,
+      title: checklistData.title || "",
+      description: checklistData.description || "",
+      items: checklistData.items || [],
+      status: checklistData.status || "Не начато",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    mockChecklists.push(newChecklist);
+    return { ...newChecklist };
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/checklists`, {
       method: 'POST',
@@ -292,7 +333,31 @@ export async function createChecklist(checklistData: Partial<Checklist>): Promis
   }
 }
 
+// Функция для конвертации файла изображения в base64
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+}
+
 export async function updateChecklist(id: number, checklistData: Partial<Checklist>): Promise<Checklist> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const checklistIndex = mockChecklists.findIndex(c => c.id === id);
+    if (checklistIndex === -1) {
+      throw new Error(`Checklist with id ${id} not found`);
+    }
+    mockChecklists[checklistIndex] = {
+      ...mockChecklists[checklistIndex],
+      ...checklistData,
+      updated_at: new Date().toISOString(),
+    };
+    return { ...mockChecklists[checklistIndex] };
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/checklists/${id}`, {
       method: 'PUT',
@@ -309,6 +374,34 @@ export async function updateChecklist(id: number, checklistData: Partial<Checkli
     return await response.json();
   } catch (error) {
     console.error('Error updating checklist:', error);
+    throw error;
+  }
+}
+
+export async function deleteChecklist(id: number): Promise<void> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const checklistIndex = mockChecklists.findIndex(c => c.id === id);
+    if (checklistIndex === -1) {
+      throw new Error(`Checklist with id ${id} not found`);
+    }
+    mockChecklists.splice(checklistIndex, 1);
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/checklists/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete checklist: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error('Error deleting checklist:', error);
     throw error;
   }
 }
@@ -446,6 +539,144 @@ export async function sendMessage(chatId: number, senderId: number, text: string
     return await response.json();
   } catch (error) {
     console.error('Error sending message:', error);
+    throw error;
+  }
+}
+
+// Reports API
+export async function getReports(inspectorId?: number): Promise<Report[]> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 400));
+    let reports = [...mockReports];
+    if (inspectorId) {
+      reports = reports.filter(report => report.inspector_id === inspectorId);
+    }
+    return reports;
+  }
+
+  try {
+    const url = inspectorId 
+      ? `${API_BASE_URL}/reports?inspector_id=${inspectorId}`
+      : `${API_BASE_URL}/reports`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch reports: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Error fetching reports:', error);
+    throw error;
+  }
+}
+
+export async function getReportById(id: number): Promise<Report> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const report = mockReports.find(r => r.id === id);
+    if (!report) {
+      throw new Error(`Report with id ${id} not found`);
+    }
+    return { ...report };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/reports/${id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch report: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching report:', error);
+    throw error;
+  }
+}
+
+export async function createReport(reportData: Partial<Report>): Promise<Report> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const newId = Math.max(...mockReports.map(r => r.id), 0) + 1;
+    const newReport: Report = {
+      id: newId,
+      date: reportData.date || new Date().toISOString().split('T')[0],
+      inspector_id: reportData.inspector_id || 0,
+      checklist_id: reportData.checklist_id || 0,
+      department_index: reportData.department_index || 0,
+      items: reportData.items || [],
+      status: reportData.status || "Не начато",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    mockReports.push(newReport);
+    return { ...newReport };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/reports`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(reportData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to create report: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating report:', error);
+    throw error;
+  }
+}
+
+export async function updateReport(id: number, reportData: Partial<Report>): Promise<Report> {
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const reportIndex = mockReports.findIndex(r => r.id === id);
+    if (reportIndex === -1) {
+      throw new Error(`Report with id ${id} not found`);
+    }
+    mockReports[reportIndex] = {
+      ...mockReports[reportIndex],
+      ...reportData,
+      updated_at: new Date().toISOString(),
+    };
+    return { ...mockReports[reportIndex] };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/reports/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(reportData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update report: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating report:', error);
     throw error;
   }
 }
