@@ -282,22 +282,9 @@ export default function ChecklistCreateModal({
           <div className="mb-4">
             <div className="flex items-center justify-between mb-3">
               <label className="block text-sm font-medium text-black">
-                Пункты чеклиста * (максимум 6)
+                Пункты чеклиста * (всего 6)
               </label>
-              <button
-                type="button"
-                onClick={handleAddItem}
-                disabled={loading || items.length >= 6}
-                className="px-3 py-1 text-sm bg-[#DBEDAE] text-black rounded-lg hover:bg-[#DBEDAE]/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                + Добавить пункт {items.length >= 6 && "(максимум достигнут)"}
-              </button>
             </div>
-            {items.length >= 6 && (
-              <p className="text-xs text-gray-500 mb-3">
-                Достигнут максимум из 6 пунктов
-              </p>
-            )}
 
             <div className="space-y-4">
               {items.map((item, index) => (
@@ -309,28 +296,6 @@ export default function ChecklistCreateModal({
                     <span className="text-sm font-medium text-gray-600">
                       Пункт {index + 1}
                     </span>
-                    {items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(item.id)}
-                        disabled={loading}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
-                    )}
                   </div>
 
                   {/* Текст пункта */}
