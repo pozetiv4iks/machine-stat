@@ -1,6 +1,49 @@
 "use client";
 
+import { useEffect, useState } from 'react';
+
 export default function AccessDenied() {
+  const [userName, setUserName] = useState<string>('');
+  const [userId, setUserId] = useState<string>('');
+
+  useEffect(() => {
+    // Получаем данные пользователя из sessionStorage или Telegram Web App
+    const getUserInfo = () => {
+      if (typeof window === 'undefined') return;
+
+      // Сначала пробуем получить из sessionStorage
+      const storedUserName = sessionStorage.getItem('current_user_name');
+      const storedUserId = sessionStorage.getItem('current_user_id');
+
+      if (storedUserName) {
+        setUserName(storedUserName);
+      }
+      if (storedUserId) {
+        setUserId(storedUserId);
+      }
+
+      // Если нет в sessionStorage, пробуем получить из Telegram Web App
+      if (!storedUserName || !storedUserId) {
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg?.initDataUnsafe?.user) {
+          const telegramUser = tg.initDataUnsafe.user;
+          const tgUserName = telegramUser.username 
+            ? `@${telegramUser.username}` 
+            : `@id${telegramUser.id}`;
+          
+          if (!storedUserName) {
+            setUserName(tgUserName);
+          }
+          if (!storedUserId && telegramUser.id) {
+            setUserId(telegramUser.id.toString());
+          }
+        }
+      }
+    };
+
+    getUserInfo();
+  }, []);
+
   return (
     <div className="min-h-screen bg-white flex items-center justify-center relative overflow-hidden">
       {/* Размытые зеленые круги на фоне */}
@@ -48,10 +91,28 @@ export default function AccessDenied() {
         <h1 className="text-3xl font-bold text-gray-800 mb-4">
           Простите, у вас нет доступа
         </h1>
-        <p className="text-gray-600 text-lg">
+        <p className="text-gray-600 text-lg mb-8">
           Обратитесь к администратору для получения доступа к приложению
         </p>
       </div>
+
+      {/* Информация о пользователе внизу */}
+      {(userName || userId) && (
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
+          <div className="text-sm text-gray-600 space-y-1">
+            {userName && (
+              <div className="font-medium">
+                Логин: <span className="text-gray-800">{userName}</span>
+              </div>
+            )}
+            {userId && (
+              <div className="font-medium">
+                ID: <span className="text-gray-800">{userId}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
