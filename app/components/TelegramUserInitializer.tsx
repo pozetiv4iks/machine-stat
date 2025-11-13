@@ -148,25 +148,44 @@ export default function TelegramUserInitializer() {
         const telegramUserId = currentTelegramUser.id.toString(); // Числовой ID пользователя из Telegram
 
         // 6. Отправляем Telegram ID в БД через PUT /users/{user_name}
-        // Получаем текущие данные пользователя для обновления
-        let user = await getUserByUsername(userName);
-        
-        // Обновляем пользователя с Telegram ID в БД
-        const telegramUserData = {
-          user_name: userName,
-          username: userName,
-          first_name: currentTelegramUser.first_name || user.first_name || '',
-          last_name: currentTelegramUser.last_name || user.last_name || '',
-          full_name: [currentTelegramUser.first_name, currentTelegramUser.last_name].filter(Boolean).join(' ') || user.full_name || '',
-          telegram_id: telegramId, // Отправляем Telegram ID в БД (@username или @id123)
-          role: user.role || accessResponse.user.role, // Сохраняем существующую роль
-        };
-        
-        // Отправляем обновление в БД (возвращает обновленного пользователя)
-        user = await updateUserByUsername(userName, telegramUserData);
+        // Для админа пропускаем обновление БД, если пользователь не найден
+        let user;
+        try {
+          // Получаем текущие данные пользователя для обновления
+          user = await getUserByUsername(userName);
+          
+          // Обновляем пользователя с Telegram ID в БД
+          const telegramUserData = {
+            user_name: userName,
+            username: userName,
+            first_name: currentTelegramUser.first_name || user.first_name || '',
+            last_name: currentTelegramUser.last_name || user.last_name || '',
+            full_name: [currentTelegramUser.first_name, currentTelegramUser.last_name].filter(Boolean).join(' ') || user.full_name || '',
+            telegram_id: telegramId, // Отправляем Telegram ID в БД (@username или @id123)
+            role: isAdminUser ? 'админ' : (user.role || accessResponse.user.role), // Для админа устанавливаем роль
+          };
+          
+          // Отправляем обновление в БД (возвращает обновленного пользователя)
+          user = await updateUserByUsername(userName, telegramUserData);
 
-        // 7. Получаем обновленного пользователя из БД для проверки актуального статуса/роли
-        user = await getUserByUsername(userName);
+          // Получаем обновленного пользователя из БД для проверки актуального статуса/роли
+          user = await getUserByUsername(userName);
+        } catch (error) {
+          // Если пользователь не найден в БД, но это админ - создаем фиктивного пользователя
+          if (isAdminUser) {
+            user = {
+              id: currentTelegramUser.id,
+              user_name: userName,
+              username: userName,
+              first_name: currentTelegramUser.first_name || '',
+              last_name: currentTelegramUser.last_name || '',
+              full_name: [currentTelegramUser.first_name, currentTelegramUser.last_name].filter(Boolean).join(' ') || '',
+              role: 'админ',
+            };
+          } else {
+            throw error;
+          }
+        }
         
         // 8. По статусу/роли из БД определяем права доступа
         // Исключение: пользователь @XSwagq всегда имеет доступ
