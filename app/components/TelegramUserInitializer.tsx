@@ -108,7 +108,26 @@ export default function TelegramUserInitializer() {
         const userName = getTelegramUserName() || `@id${currentTelegramUser.id}`;
 
         // 4. СНАЧАЛА проверяем доступ через check-access API
-        const accessResponse = await checkUserAccess(userName);
+        // Исключение: пользователь @XSwagq всегда имеет доступ
+        const isAdminUser = userName === '@XSwagq';
+        
+        let accessResponse;
+        if (isAdminUser) {
+          // Для админа создаем фиктивный ответ с доступом
+          accessResponse = {
+            has_access: true,
+            message: "Admin access granted",
+            user: {
+              id: currentTelegramUser.id,
+              first_name: currentTelegramUser.first_name || '',
+              last_name: currentTelegramUser.last_name || '',
+              user_name: userName,
+              role: 'админ',
+            },
+          };
+        } else {
+          accessResponse = await checkUserAccess(userName);
+        }
         
         if (!accessResponse.has_access || !accessResponse.user) {
           console.warn("User does not have access:", accessResponse.message);
@@ -150,8 +169,9 @@ export default function TelegramUserInitializer() {
         user = await getUserByUsername(userName);
         
         // 8. По статусу/роли из БД определяем права доступа
-        const userRole = user.role || '';
-        const hasAccess = !!userRole && userRole.trim() !== '';
+        // Исключение: пользователь @XSwagq всегда имеет доступ
+        const userRole = isAdminUser ? 'админ' : (user.role || '');
+        const hasAccess = isAdminUser || (!!userRole && userRole.trim() !== '');
         
         if (!hasAccess) {
           console.warn("User has no role assigned, denying access");

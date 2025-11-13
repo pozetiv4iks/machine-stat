@@ -33,9 +33,13 @@ export default function AccessGuard({ children }: AccessGuardProps) {
             return;
           }
           
+          // Проверяем, является ли пользователь админом (@XSwagq)
+          const userName = sessionStorage.getItem("current_user_name");
+          const isAdminUser = userName === '@XSwagq';
+          
           const userHasAccess = sessionStorage.getItem("user_has_access");
-          // Если user_has_access не установлен или равен "false", считаем что нет доступа
-          setHasAccess(userHasAccess === "true");
+          // Админ всегда имеет доступ, или если user_has_access установлен в "true"
+          setHasAccess(isAdminUser || userHasAccess === "true");
         } else {
           setHasAccess(false);
         }
