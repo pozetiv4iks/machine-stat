@@ -138,7 +138,7 @@ export default function ChecklistCreateModal({
         }))
       );
 
-      if (isEditMode && checklist) {
+      if (isEditMode && checklist && checklist.id) {
         // Режим редактирования
         await updateChecklist(checklist.id, {
           title: title.trim(),
