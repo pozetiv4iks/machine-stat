@@ -450,54 +450,43 @@ export async function createUser(userData: Partial<User>): Promise<User> {
     return { ...newUser };
   }
 
-  if (USE_API_FIRST) {
+  // Используем прокси через Next.js API route
+  const url = USE_API_PROXY ? '/api/users' : `${API_BASE_URL}/users`;
+  
   try {
-      const apiData = adaptUserToAPI(userData);
-    const response = await fetch(`${API_BASE_URL}/users`, {
+    const apiData = adaptUserToAPI(userData);
+    console.log('[API] Creating user:', url);
+    console.log('[API] Request data:', apiData);
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-        body: JSON.stringify(apiData),
+      body: JSON.stringify(apiData),
+      cache: 'no-store',
     });
 
+    console.log('[API] createUser response status:', response.status, response.statusText);
+
     if (!response.ok) {
-      throw new Error(`Failed to create user: ${response.statusText}`);
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { error: await response.text() };
+      }
+      console.error('[API] createUser error:', errorData);
+      throw new Error(`Failed to create user: ${response.status} ${response.statusText}`);
     }
 
-      const data: UserResponse = await response.json();
-      return adaptUserFromAPI(data);
+    const data: UserResponse = await response.json();
+    console.log('[API] createUser response:', data);
+    return adaptUserFromAPI(data);
   } catch (error) {
-      console.warn('API request failed, using mock data:', error);
-      // При ошибке используем моковые данные
-      await new Promise(resolve => setTimeout(resolve, 300));
-      const newId = Math.max(...mockUsers.map(u => u.id), 0) + 1;
-      const newUser: User = {
-        id: newId,
-        username: userData.username || "",
-        full_name: userData.full_name || "",
-        role: userData.role || "",
-        telegram_id: userData.telegram_id || "",
-        created_at: new Date().toISOString(),
-      };
-      mockUsers.push(newUser);
-      return { ...newUser };
-    }
+    console.error('[API] Create user error:', error);
+    throw error;
   }
-
-  // Fallback на моковые данные
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const newId = Math.max(...mockUsers.map(u => u.id), 0) + 1;
-  const newUser: User = {
-    id: newId,
-    username: userData.username || "",
-    full_name: userData.full_name || "",
-    role: userData.role || "",
-    telegram_id: userData.telegram_id || "",
-    created_at: new Date().toISOString(),
-  };
-  mockUsers.push(newUser);
-  return { ...newUser };
 }
 
 export async function updateUser(id: number, userData: Partial<User>): Promise<User> {
@@ -525,37 +514,49 @@ export async function updateUser(id: number, userData: Partial<User>): Promise<U
     }
   }
   
-  if (USE_API_FIRST && userName) {
-    try {
-      const apiData = adaptUserToAPI(userData);
-      const response = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(userName)}`, {
+  if (!userName) {
+    throw new Error(`Cannot update user: user_name not found for user id ${id}`);
+  }
+
+  // Используем прокси через Next.js API route
+  const url = USE_API_PROXY 
+    ? `/api/users/${encodeURIComponent(userName)}`
+    : `${API_BASE_URL}/users/${encodeURIComponent(userName)}`;
+  
+  try {
+    const apiData = adaptUserToAPI(userData);
+    console.log('[API] Updating user:', url);
+    console.log('[API] Request data:', apiData);
+    
+    const response = await fetch(url, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-        body: JSON.stringify(apiData),
+      body: JSON.stringify(apiData),
+      cache: 'no-store',
     });
 
+    console.log('[API] updateUser response status:', response.status, response.statusText);
+
     if (!response.ok) {
-      throw new Error(`Failed to update user: ${response.statusText}`);
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { error: await response.text() };
+      }
+      console.error('[API] updateUser error:', errorData);
+      throw new Error(`Failed to update user: ${response.status} ${response.statusText}`);
     }
 
-      const data: UserResponse = await response.json();
-      return adaptUserFromAPI(data);
+    const data: UserResponse = await response.json();
+    console.log('[API] updateUser response:', data);
+    return adaptUserFromAPI(data);
   } catch (error) {
-      console.warn('API request failed, using mock data:', error);
-      // При ошибке используем моковые данные
-    }
+    console.error('[API] Update user error:', error);
+    throw error;
   }
-
-  // Fallback на моковые данные
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const userIndex = mockUsers.findIndex(u => u.id === id);
-  if (userIndex === -1) {
-    throw new Error(`User with id ${id} not found`);
-  }
-  mockUsers[userIndex] = { ...mockUsers[userIndex], ...userData };
-  return { ...mockUsers[userIndex] };
 }
 
 // Initialize or update user from Telegram Mini App
@@ -617,58 +618,51 @@ export async function updateUserByUsername(userName: string, userData: Partial<U
     return { ...mockUsers[userIndex] };
   }
 
-  if (USE_API_FIRST) {
-    try {
-      const apiData = adaptUserToAPI({ ...userData, user_name: userName, username: userName });
-      const url = `${API_BASE_URL}/users/${encodeURIComponent(userName)}`;
-      console.log('[API] Updating user by username:', url);
-      console.log('[API] Request data:', apiData);
-      
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(apiData),
-      });
+  // Используем прокси через Next.js API route
+  const url = USE_API_PROXY 
+    ? `/api/users/${encodeURIComponent(userName)}`
+    : `${API_BASE_URL}/users/${encodeURIComponent(userName)}`;
+  
+  try {
+    const apiData = adaptUserToAPI({ ...userData, user_name: userName, username: userName });
+    console.log('[API] Updating user by username:', url);
+    console.log('[API] Request data:', apiData);
+    
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(apiData),
+      cache: 'no-store',
+    });
 
-      console.log('[API] updateUserByUsername response status:', response.status, response.statusText);
+    console.log('[API] updateUserByUsername response status:', response.status, response.statusText);
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          console.log('[API] User not found (404)');
-          throw new Error(`User with username ${userName} not found`);
-        }
-        const errorText = await response.text();
-        console.error('[API] updateUserByUsername error:', errorText);
-        throw new Error(`Failed to update user: ${response.status} ${response.statusText}`);
-      }
-
-      const data: UserResponse = await response.json();
-      console.log('[API] updateUserByUsername response:', data);
-      const adapted = adaptUserFromAPI(data);
-      console.log('[API] Adapted updated user:', adapted);
-      return adapted;
-    } catch (error) {
-      console.warn('API request failed, using mock data:', error);
-      await new Promise(resolve => setTimeout(resolve, 300));
-      const userIndex = mockUsers.findIndex(u => u.username === userName || u.user_name === userName);
-      if (userIndex === -1) {
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.log('[API] User not found (404)');
         throw new Error(`User with username ${userName} not found`);
       }
-      mockUsers[userIndex] = { ...mockUsers[userIndex], ...userData };
-      return { ...mockUsers[userIndex] };
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { error: await response.text() };
+      }
+      console.error('[API] updateUserByUsername error:', errorData);
+      throw new Error(`Failed to update user: ${response.status} ${response.statusText}`);
     }
-  }
 
-  // Fallback на моковые данные
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const userIndex = mockUsers.findIndex(u => u.username === userName || u.user_name === userName);
-  if (userIndex === -1) {
-    throw new Error(`User with username ${userName} not found`);
+    const data: UserResponse = await response.json();
+    console.log('[API] updateUserByUsername response:', data);
+    const adapted = adaptUserFromAPI(data);
+    console.log('[API] Adapted updated user:', adapted);
+    return adapted;
+  } catch (error) {
+    console.error('[API] Update user by username error:', error);
+    throw error;
   }
-  mockUsers[userIndex] = { ...mockUsers[userIndex], ...userData };
-  return { ...mockUsers[userIndex] };
 }
 
 export async function deleteUser(id: number): Promise<void> {
@@ -691,33 +685,45 @@ export async function deleteUser(id: number): Promise<void> {
   }
 
   const userName = user.user_name || user.username;
+  if (!userName) {
+    throw new Error(`Cannot delete user: user_name not found for user id ${id}`);
+  }
+
+  // Используем прокси через Next.js API route
+  const url = USE_API_PROXY 
+    ? `/api/users/${encodeURIComponent(userName)}`
+    : `${API_BASE_URL}/users/${encodeURIComponent(userName)}`;
   
-  if (USE_API_FIRST && userName) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(userName)}`, {
+  try {
+    console.log('[API] Deleting user:', url);
+    
+    const response = await fetch(url, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
       },
+      cache: 'no-store',
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to delete user: ${response.statusText}`);
-    }
-      return; // Успешно удалено через API
-  } catch (error) {
-      console.warn('API request failed, using mock data:', error);
-      // При ошибке используем моковые данные
-    }
-  }
+    console.log('[API] deleteUser response status:', response.status, response.statusText);
 
-  // Fallback на моковые данные
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const userIndex = mockUsers.findIndex(u => u.id === id);
-  if (userIndex === -1) {
-    throw new Error(`User with id ${id} not found`);
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { error: await response.text() };
+      }
+      console.error('[API] deleteUser error:', errorData);
+      throw new Error(`Failed to delete user: ${response.status} ${response.statusText}`);
+    }
+    
+    console.log('[API] User deleted successfully');
+    return; // Успешно удалено через API
+  } catch (error) {
+    console.error('[API] Delete user error:', error);
+    throw error;
   }
-  mockUsers.splice(userIndex, 1);
 }
 
 // Adapter functions for Checklists
