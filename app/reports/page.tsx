@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getReports, getUsers, type Report, type User } from "@/assets/api";
 import Link from "next/link";
+import RoleSwitcher from "../components/RoleSwitcher";
 
 const CURRENT_USER_ID = 6; // ID проверяющего (Елена Смирнова)
 
@@ -101,7 +102,10 @@ export default function ReportsPage() {
         </div>
 
         <div className="px-4 pt-16 pb-16 relative z-10 max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-black mb-16">Отчеты</h1>
+          <div className="flex items-center justify-between mb-16">
+            <h1 className="text-2xl font-bold text-black">Отчеты</h1>
+            <RoleSwitcher />
+          </div>
           <div className="text-center py-20">
             <p className="text-gray-600">У вас нет доступа к отчетам</p>
             <p className="text-sm text-gray-500 mt-2">Отчеты доступны только для проверяющих</p>
@@ -140,7 +144,10 @@ export default function ReportsPage() {
       </div>
 
       <div className="px-4 pt-16 pb-16 relative z-10 max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-black mb-16">Отчеты</h1>
+        <div className="flex items-center justify-between mb-16">
+          <h1 className="text-2xl font-bold text-black">Отчеты</h1>
+          <RoleSwitcher />
+        </div>
 
         {loading ? (
           <div className="text-center py-20">

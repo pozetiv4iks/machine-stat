@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getChartData, type ChartData } from "@/assets/api";
+import RoleSwitcher from "../components/RoleSwitcher";
 
 export default function ChartPage() {
   const [chartData, setChartData] = useState<ChartData[]>([]);
@@ -81,7 +82,10 @@ export default function ChartPage() {
       </div>
 
       <div className="px-4 pt-16 pb-16 relative z-10 max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-black mb-16">График</h1>
+        <div className="flex items-center justify-between mb-16">
+          <h1 className="text-2xl font-bold text-black">График</h1>
+          <RoleSwitcher />
+        </div>
 
         {/* Фильтры */}
         <div className="mb-16 flex gap-3">

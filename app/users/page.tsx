@@ -6,6 +6,7 @@ import UserEditModal from "../components/UserEditModal";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import RoleEditModal from "../components/RoleEditModal";
 import CustomSelect from "../components/CustomSelect";
+import RoleSwitcher from "../components/RoleSwitcher";
 
 export default function UsersPage() {
   const [activeTab, setActiveTab] = useState<"users" | "roles">("users");
@@ -233,7 +234,10 @@ export default function UsersPage() {
       </div>
 
       <div className="px-4 pt-16 pb-16 relative z-10 max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-black mb-8">Пользователи</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-bold text-black">Пользователи</h1>
+          <RoleSwitcher />
+        </div>
 
         {/* Вкладки */}
         <div className="flex gap-4 mb-8 border-b border-gray-200">

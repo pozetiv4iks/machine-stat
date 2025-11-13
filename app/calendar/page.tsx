@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import DateDetailsModal from "../components/DateDetailsModal";
+import RoleSwitcher from "../components/RoleSwitcher";
 
 const monthNames = [
   "Январь",
@@ -406,9 +407,12 @@ export default function CalendarPage() {
 
       <div className="px-4 pt-16 pb-16 relative z-10 max-w-4xl mx-auto">
         {/* Заголовок года */}
-        <h1 className="text-3xl font-bold text-black mb-12 text-center">
-          {currentYear}
-        </h1>
+        <div className="flex items-center justify-between mb-12">
+          <h1 className="text-3xl font-bold text-black">
+            {currentYear}
+          </h1>
+          <RoleSwitcher />
+        </div>
 
         {/* Все месяцы года */}
         <div className="space-y-8" key={refreshKey}>

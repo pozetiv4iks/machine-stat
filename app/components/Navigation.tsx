@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import RoleSwitcher from "./RoleSwitcher";
 import { getCurrentRole } from "../utils/localStorage";
 
 const allNavItems = [
@@ -173,8 +172,10 @@ export default function Navigation() {
       return true;
     }
 
-    // Проверяем, является ли пользователь начальником отдела (роль начинается с "Начальник отдела")
-    if (userRole.startsWith("Начальник отдела") && item.roles.includes("начальник отдела")) {
+    // Проверяем, является ли пользователь начальником отдела (роль содержит слова "начальник отдела")
+    const userRoleLower = userRole.toLowerCase();
+    const isDepartmentHead = userRoleLower.includes("начальник отдела");
+    if (isDepartmentHead && item.roles.includes("начальник отдела")) {
       return true;
     }
 
@@ -212,10 +213,6 @@ export default function Navigation() {
             </Link>
           );
         })}
-        {/* Переключатель ролей */}
-        <div className="flex items-center justify-center px-1">
-          <RoleSwitcher />
-        </div>
       </div>
     </nav>
   );

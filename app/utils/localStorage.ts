@@ -1,7 +1,7 @@
 // Утилита для работы с localStorage
 // Все данные сохраняются в localStorage для сохранения при обновлении страницы
 
-import { User, Checklist, Report, Role } from '@/assets/api';
+import { User, Checklist, Report, Role, ChartData } from '@/assets/api';
 
 const STORAGE_KEYS = {
   USERS: 'app_users',
@@ -9,6 +9,9 @@ const STORAGE_KEYS = {
   REPORTS: 'app_reports',
   ROLES: 'app_roles',
   CURRENT_ROLE: 'app_current_role',
+  CHART_DATA_WEEK: 'app_chart_data_week',
+  CHART_DATA_MONTH: 'app_chart_data_month',
+  CHART_DATA_YEAR: 'app_chart_data_year',
 };
 
 // Users
@@ -167,6 +170,33 @@ export function getCurrentRole(): string | null {
   }
 }
 
+// Chart Data
+export function saveChartDataToStorage(period: string, data: ChartData[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const key = period === 'week' ? STORAGE_KEYS.CHART_DATA_WEEK :
+                period === 'month' ? STORAGE_KEYS.CHART_DATA_MONTH :
+                STORAGE_KEYS.CHART_DATA_YEAR;
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (error) {
+    console.error('Error saving chart data to localStorage:', error);
+  }
+}
+
+export function getChartDataFromStorage(period: string): ChartData[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const key = period === 'week' ? STORAGE_KEYS.CHART_DATA_WEEK :
+                period === 'month' ? STORAGE_KEYS.CHART_DATA_MONTH :
+                STORAGE_KEYS.CHART_DATA_YEAR;
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Error reading chart data from localStorage:', error);
+    return [];
+  }
+}
+
 // Инициализация данных из моков, если localStorage пуст
 export function initializeStorageFromMocks(): void {
   if (typeof window === 'undefined') return;
@@ -190,6 +220,22 @@ export function initializeStorageFromMocks(): void {
   if (getRolesFromStorage().length === 0) {
     const { mockRoles } = require('@/assets/mockData');
     saveRolesToStorage(mockRoles);
+  }
+  
+  // Инициализируем данные графиков
+  if (getChartDataFromStorage('week').length === 0) {
+    const { mockChartDataWeek } = require('@/assets/mockData');
+    saveChartDataToStorage('week', mockChartDataWeek);
+  }
+  
+  if (getChartDataFromStorage('month').length === 0) {
+    const { mockChartDataMonth } = require('@/assets/mockData');
+    saveChartDataToStorage('month', mockChartDataMonth);
+  }
+  
+  if (getChartDataFromStorage('year').length === 0) {
+    const { mockChartDataYear } = require('@/assets/mockData');
+    saveChartDataToStorage('year', mockChartDataYear);
   }
   
   // Устанавливаем роль по умолчанию, если не установлена

@@ -74,31 +74,31 @@ export default function RoleSwitcher() {
         </svg>
       </button>
 
-      {isOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
-          />
-          <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[200px]">
-            <div className="py-1">
-              {availableRoles.map((role) => (
-                <button
-                  key={role}
-                  onClick={() => handleRoleChange(role)}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${
-                    currentRole === role
-                      ? 'bg-[#DBEDAE] text-black font-medium'
-                      : 'text-gray-700'
-                  }`}
-                >
-                  {role}
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
+            {isOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsOpen(false)}
+                />
+                <div className="absolute top-full right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[200px]">
+                  <div className="py-1">
+                    {availableRoles.map((role) => (
+                      <button
+                        key={role}
+                        onClick={() => handleRoleChange(role)}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${
+                          currentRole === role
+                            ? 'bg-[#DBEDAE] text-black font-medium'
+                            : 'text-gray-700'
+                        }`}
+                      >
+                        {role}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
     </div>
   );
 }

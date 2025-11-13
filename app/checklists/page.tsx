@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getChecklists, deleteChecklist, type Checklist } from "@/assets/api";
 import ChecklistCreateModal from "../components/ChecklistCreateModal";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
+import RoleSwitcher from "../components/RoleSwitcher";
 
 export default function ChecklistsPage() {
   const [checklists, setChecklists] = useState<Checklist[]>([]);
@@ -150,10 +151,12 @@ export default function ChecklistsPage() {
       <div className="px-4 pt-16 pb-16 relative z-10 max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-16">
           <h1 className="text-2xl font-bold text-black">Чеклисты</h1>
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="px-4 py-2 bg-[#DBEDAE] text-black rounded-lg hover:bg-[#DBEDAE]/80 transition-colors font-medium flex items-center gap-2"
-          >
+          <div className="flex items-center gap-3">
+            <RoleSwitcher />
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="px-4 py-2 bg-[#DBEDAE] text-black rounded-lg hover:bg-[#DBEDAE]/80 transition-colors font-medium flex items-center gap-2"
+            >
             <svg
               className="w-5 h-5"
               fill="none"
@@ -169,6 +172,7 @@ export default function ChecklistsPage() {
             </svg>
             Создать чеклист
           </button>
+          </div>
         </div>
 
         {/* Поисковая строка */}

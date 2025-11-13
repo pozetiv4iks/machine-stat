@@ -1321,67 +1321,146 @@ export async function deleteChecklist(id: number): Promise<void> {
 
 // Chart/Statistics API
 export async function getChartData(period?: string): Promise<ChartData[]> {
-  if (USE_MOCK_DATA) {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    
-    switch (period) {
-      case 'week':
-        return [...mockChartDataWeek];
-      case 'month':
-        return [...mockChartDataMonth];
-      case 'year':
-        return [...mockChartDataYear];
-      default:
-        return [...mockChartDataWeek];
+  const selectedPeriod = period || 'week';
+  
+  // Если используем localStorage, загружаем оттуда
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { getChartDataFromStorage, initializeStorageFromMocks } = await import('../app/utils/localStorage');
+      initializeStorageFromMocks();
+      const chartData = getChartDataFromStorage(selectedPeriod);
+      if (chartData.length > 0) {
+        console.log('[API] Loaded chart data from localStorage for period:', selectedPeriod, chartData.length);
+        return chartData;
+      }
+    } catch (error) {
+      console.error('[API] Error loading from localStorage:', error);
     }
   }
 
-  if (USE_API_FIRST) {
-  try {
-    const url = period 
-      ? `${API_BASE_URL}/statistics?period=${period}`
-      : `${API_BASE_URL}/statistics`;
+  if (USE_MOCK_DATA) {
+    await new Promise(resolve => setTimeout(resolve, 400));
     
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch chart data: ${response.statusText}`);
+    let mockData: ChartData[];
+    switch (selectedPeriod) {
+      case 'week':
+        mockData = [...mockChartDataWeek];
+        break;
+      case 'month':
+        mockData = [...mockChartDataMonth];
+        break;
+      case 'year':
+        mockData = [...mockChartDataYear];
+        break;
+      default:
+        mockData = [...mockChartDataWeek];
     }
+    
+    // Сохраняем в localStorage
+    if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+      try {
+        const { saveChartDataToStorage } = await import('../app/utils/localStorage');
+        saveChartDataToStorage(selectedPeriod, mockData);
+      } catch (error) {
+        console.error('[API] Error saving to localStorage:', error);
+      }
+    }
+    
+    return mockData;
+  }
 
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
-  } catch (error) {
+  if (USE_API_FIRST) {
+    try {
+      const url = selectedPeriod 
+        ? `${API_BASE_URL}/statistics?period=${selectedPeriod}`
+        : `${API_BASE_URL}/statistics`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch chart data: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const chartData = Array.isArray(data) ? data : [];
+      
+      // Сохраняем в localStorage
+      if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+        try {
+          const { saveChartDataToStorage } = await import('../app/utils/localStorage');
+          saveChartDataToStorage(selectedPeriod, chartData);
+        } catch (error) {
+          console.error('[API] Error saving to localStorage:', error);
+        }
+      }
+      
+      return chartData;
+    } catch (error) {
       console.warn('API request failed, using mock data:', error);
       await new Promise(resolve => setTimeout(resolve, 300));
-      switch (period) {
+      
+      let mockData: ChartData[];
+      switch (selectedPeriod) {
         case 'week':
-          return [...mockChartDataWeek];
+          mockData = [...mockChartDataWeek];
+          break;
         case 'month':
-          return [...mockChartDataMonth];
+          mockData = [...mockChartDataMonth];
+          break;
         case 'year':
-          return [...mockChartDataYear];
+          mockData = [...mockChartDataYear];
+          break;
         default:
-          return [...mockChartDataWeek];
+          mockData = [...mockChartDataWeek];
       }
+      
+      // Сохраняем в localStorage
+      if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+        try {
+          const { saveChartDataToStorage } = await import('../app/utils/localStorage');
+          saveChartDataToStorage(selectedPeriod, mockData);
+        } catch (error) {
+          console.error('[API] Error saving to localStorage:', error);
+        }
+      }
+      
+      return mockData;
     }
   }
 
   await new Promise(resolve => setTimeout(resolve, 400));
-  switch (period) {
+  
+  let mockData: ChartData[];
+  switch (selectedPeriod) {
     case 'week':
-      return [...mockChartDataWeek];
+      mockData = [...mockChartDataWeek];
+      break;
     case 'month':
-      return [...mockChartDataMonth];
+      mockData = [...mockChartDataMonth];
+      break;
     case 'year':
-      return [...mockChartDataYear];
+      mockData = [...mockChartDataYear];
+      break;
     default:
-      return [...mockChartDataWeek];
+      mockData = [...mockChartDataWeek];
   }
+  
+  // Сохраняем в localStorage
+  if (USE_LOCAL_STORAGE && typeof window !== 'undefined') {
+    try {
+      const { saveChartDataToStorage } = await import('../app/utils/localStorage');
+      saveChartDataToStorage(selectedPeriod, mockData);
+    } catch (error) {
+      console.error('[API] Error saving to localStorage:', error);
+    }
+  }
+  
+  return mockData;
 }
 
 // Chats API

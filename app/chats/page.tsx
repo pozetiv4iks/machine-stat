@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { getChats, getChatMessages, sendMessage, getUsers, type Chat, type Message, type User } from "@/assets/api";
+import RoleSwitcher from "../components/RoleSwitcher";
 
 const CURRENT_USER_ID = 1; // ID текущего пользователя
 
@@ -314,7 +315,10 @@ export default function ChatsPage() {
       </div>
 
       <div className="px-4 pt-16 pb-16 relative z-10 max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-black mb-16">Чаты</h1>
+        <div className="flex items-center justify-between mb-16">
+          <h1 className="text-2xl font-bold text-black">Чаты</h1>
+          <RoleSwitcher />
+        </div>
 
         {loading ? (
           <div className="flex justify-center items-center py-20">
