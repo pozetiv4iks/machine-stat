@@ -375,7 +375,7 @@ export default function DateDetailsModal({
                     ? (userSelectModal.field === "inspector" ? dept.inspector : dept.meeting)
                     : null
                 )
-                .filter(Boolean)
+                .filter((user): user is string => user !== null && user !== "")
             : []
         }
       />
