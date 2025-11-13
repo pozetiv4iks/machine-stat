@@ -149,23 +149,17 @@ export default function LoadingScreen() {
         </h1>
       </div>
 
-      {/* Информация о пользователе внизу */}
-      {(userName || userId) && (
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
-          <div className="text-sm text-gray-600 space-y-1">
-            {userName && (
-              <div className="font-medium">
-                Логин: <span className="text-gray-800">{userName}</span>
-              </div>
-            )}
-            {userId && (
-              <div className="font-medium">
-                ID: <span className="text-gray-800">{userId}</span>
-              </div>
-            )}
+      {/* Информация о пользователе внизу - всегда показываем */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
+        <div className="text-sm text-gray-600 space-y-1">
+          <div className="font-medium">
+            Логин: <span className="text-gray-800">{userName || 'не определен'}</span>
+          </div>
+          <div className="font-medium">
+            ID: <span className="text-gray-800">{userId || 'не определен'}</span>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
