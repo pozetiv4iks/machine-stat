@@ -26,8 +26,14 @@ export default function ChecklistCreateModal({
 }: ChecklistCreateModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  // Всегда инициализируем с 6 пунктами
   const [items, setItems] = useState<ChecklistItemForm[]>([
     { id: 1, text: "", description: "", reference_image: null, imageFile: null },
+    { id: 2, text: "", description: "", reference_image: null, imageFile: null },
+    { id: 3, text: "", description: "", reference_image: null, imageFile: null },
+    { id: 4, text: "", description: "", reference_image: null, imageFile: null },
+    { id: 5, text: "", description: "", reference_image: null, imageFile: null },
+    { id: 6, text: "", description: "", reference_image: null, imageFile: null },
   ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,43 +51,63 @@ export default function ChecklistCreateModal({
         : descriptionValue;
       setDescription(descriptionStr);
       if (checklist.items && checklist.items.length > 0) {
-        setItems(
-          checklist.items.map((item, index) => ({
-            id: item.id || index + 1,
-            text: item.text || "",
-            description: item.description || "",
-            reference_image: item.reference_image || null,
+        // Всегда должно быть 6 пунктов
+        const mappedItems = checklist.items.map((item, index) => ({
+          id: item.id || index + 1,
+          text: item.text || "",
+          description: item.description || "",
+          reference_image: item.reference_image || null,
+          imageFile: null,
+        }));
+        // Дополняем до 6 пунктов, если их меньше
+        while (mappedItems.length < 6) {
+          mappedItems.push({
+            id: mappedItems.length + 1,
+            text: "",
+            description: "",
+            reference_image: null,
             imageFile: null,
-          }))
-        );
+          });
+        }
+        // Обрезаем до 6 пунктов, если их больше
+        setItems(mappedItems.slice(0, 6));
       } else {
-        setItems([{ id: 1, text: "", description: "", reference_image: null, imageFile: null }]);
+        // Всегда 6 пунктов при создании
+        setItems([
+          { id: 1, text: "", description: "", reference_image: null, imageFile: null },
+          { id: 2, text: "", description: "", reference_image: null, imageFile: null },
+          { id: 3, text: "", description: "", reference_image: null, imageFile: null },
+          { id: 4, text: "", description: "", reference_image: null, imageFile: null },
+          { id: 5, text: "", description: "", reference_image: null, imageFile: null },
+          { id: 6, text: "", description: "", reference_image: null, imageFile: null },
+        ]);
       }
     } else if (isOpen && !checklist) {
-      // Режим создания - очищаем форму
+      // Режим создания - очищаем форму, всегда 6 пунктов
       setTitle("");
       setDescription("");
-      setItems([{ id: 1, text: "", description: "", reference_image: null, imageFile: null }]);
+      setItems([
+        { id: 1, text: "", description: "", reference_image: null, imageFile: null },
+        { id: 2, text: "", description: "", reference_image: null, imageFile: null },
+        { id: 3, text: "", description: "", reference_image: null, imageFile: null },
+        { id: 4, text: "", description: "", reference_image: null, imageFile: null },
+        { id: 5, text: "", description: "", reference_image: null, imageFile: null },
+        { id: 6, text: "", description: "", reference_image: null, imageFile: null },
+      ]);
     }
   }, [isOpen, checklist]);
 
   if (!isOpen) return null;
 
+  // Убрали возможность добавлять/удалять пункты - всегда должно быть ровно 6
   const handleAddItem = () => {
-    if (items.length >= 6) {
-      return; // Максимум 6 пунктов
-    }
-    const newId = Math.max(...items.map(i => i.id), 0) + 1;
-    setItems([
-      ...items,
-      { id: newId, text: "", description: "", reference_image: null, imageFile: null },
-    ]);
+    // Нельзя добавлять - всегда 6 пунктов
+    return;
   };
 
   const handleRemoveItem = (id: number) => {
-    if (items.length > 1) {
-      setItems(items.filter(item => item.id !== id));
-    }
+    // Нельзя удалять - всегда должно быть 6 пунктов
+    return;
   };
 
   const handleItemChange = (id: number, field: keyof ChecklistItemForm, value: string | File | null) => {
@@ -116,9 +142,15 @@ export default function ChecklistCreateModal({
       return;
     }
 
+    // Проверяем, что все 6 пунктов заполнены
+    if (items.length !== 6) {
+      setError("Чеклист должен содержать ровно 6 пунктов");
+      return;
+    }
+    
     const validItems = items.filter(item => item.text.trim());
-    if (validItems.length === 0) {
-      setError("Добавьте хотя бы один пункт чеклиста");
+    if (validItems.length !== 6) {
+      setError("Все 6 пунктов чеклиста должны быть заполнены");
       return;
     }
 
