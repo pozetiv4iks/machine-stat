@@ -16,6 +16,14 @@ export async function PUT(
     }
     const body = await request.json();
     
+    // Убираем @ из user_name в теле запроса, если он есть
+    if (body.user_name && body.user_name.startsWith('@')) {
+      body.user_name = body.user_name.substring(1);
+    }
+    if (body.username && body.username.startsWith('@')) {
+      body.username = body.username.substring(1);
+    }
+    
     console.log('[API Proxy] Updating user:', userName);
     console.log('[API Proxy] Request data:', body);
     
